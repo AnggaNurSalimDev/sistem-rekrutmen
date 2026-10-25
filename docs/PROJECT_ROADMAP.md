@@ -29,14 +29,14 @@
 
 # 3. Tahap 2 — Scoring Engine (Independen)
 *Dikerjakan lebih awal karena berupa fungsi murni dan bisa diuji tanpa web atau database.*
-- [ ] 2.1 Fungsi normalisasi skill + kamus alias.
-- [ ] 2.2 Fungsi kalkulasi skor CV.
-- [ ] 2.3 Fungsi kalkulasi riwayat kerja → total bulan & jumlah perusahaan (termasuk `selesai = null` dan entri tidak valid).
-- [ ] 2.4 Fungsi kalkulasi Tenure (termasuk flag `tanpa_riwayat_kerja`).
-- [ ] 2.5 Fungsi kalkulasi Tes Teknis (normalisasi batas bawah + rata-rata tertimbang per tes).
-- [ ] 2.6 Fungsi kalkulasi Anggaran dan Ketersediaan Waktu.
-- [ ] 2.7 Kalkulator agregat total akhir (mengembalikan `null` jika ada komponen yang belum lengkap).
-- [ ] 2.8 Pengujian dengan JSON statis. → DoD: test mencakup minimal kasus berikut:
+- [x] 2.1 Fungsi normalisasi skill + kamus alias.
+- [x] 2.2 Fungsi kalkulasi skor CV.
+- [x] 2.3 Fungsi kalkulasi riwayat kerja → total bulan & jumlah perusahaan (termasuk `selesai = null` dan entri tidak valid).
+- [x] 2.4 Fungsi kalkulasi Tenure (termasuk flag `tanpa_riwayat_kerja`).
+- [x] 2.5 Fungsi kalkulasi Tes Teknis (normalisasi batas bawah + rata-rata tertimbang per tes).
+- [x] 2.6 Fungsi kalkulasi Anggaran dan Ketersediaan Waktu.
+- [x] 2.7 Kalkulator agregat total akhir (mengembalikan `null` jika ada komponen yang belum lengkap).
+- [x] 2.8 Pengujian dengan JSON statis. → DoD: test mencakup minimal kasus berikut:
   - Aktual tepat di batas bawah, tepat di target, di antara keduanya, di atas target.
   - Tenure tepat 6 bulan dan tepat 12 bulan.
   - Fresh graduate (0 perusahaan) → Tenure 50, bukan NaN atau 100.

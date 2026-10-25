@@ -1,0 +1,54 @@
+{
+  "sempurna": {
+    "tanggalLamaran": "2026-10-25",
+    "ekspektasiGaji": 7500000,
+    "ketersediaanWaktu": "penuh",
+    "cv": {
+      "statusEkstraksi": "berhasil",
+      "skills": ["ReactJS", "javascript", "GIT", "TypeScript"],
+      "riwayatKerja": [
+        { "perusahaan": "PT Maju Jaya", "mulai": "2022-01", "selesai": "2023-12" },
+        { "perusahaan": "CV Kreasi Digital", "mulai": "2024-01", "selesai": null }
+      ]
+    },
+    "hasilUjian": [
+      { "lowonganTesId": "tes-logika", "skorPencapaian": 85 },
+      { "lowonganTesId": "tes-coding", "skorPencapaian": 95 }
+    ]
+  },
+  "freshGraduate": {
+    "tanggalLamaran": "2026-10-25",
+    "ekspektasiGaji": 6000000,
+    "ketersediaanWaktu": "penuh",
+    "cv": {
+      "statusEkstraksi": "berhasil",
+      "skills": ["React", "JavaScript", "Git"],
+      "riwayatKerja": []
+    },
+    "hasilUjian": [
+      { "lowonganTesId": "tes-logika", "skorPencapaian": 80 },
+      { "lowonganTesId": "tes-coding", "skorPencapaian": 90 }
+    ]
+  },
+  "belumUjian": {
+    "tanggalLamaran": "2026-10-25",
+    "ekspektasiGaji": 7000000,
+    "ketersediaanWaktu": "sebagian",
+    "cv": {
+      "statusEkstraksi": "berhasil",
+      "skills": ["React"],
+      "riwayatKerja": [{ "perusahaan": "PT A", "mulai": "2025-01", "selesai": "2025-12" }]
+    },
+    "hasilUjian": [{ "lowonganTesId": "tes-logika", "skorPencapaian": 70 }]
+  },
+  "ekstraksiGagal": {
+    "tanggalLamaran": "2026-10-25",
+    "ekspektasiGaji": 9000000,
+    "ketersediaanWaktu": "tidak",
+    "cv": { "statusEkstraksi": "gagal", "skills": [], "riwayatKerja": [] },
+    "hasilUjian": [
+      { "lowonganTesId": "tes-logika", "skorPencapaian": 60 },
+      { "lowonganTesId": "tes-coding", "skorPencapaian": 70 }
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "id": "low-001",
+  "posisi": "Frontend Developer",
+  "budgetMaksimal": 8000000,
+  "skillWajib": ["React", "JavaScript", "Git"],
+  "skillOpsional": ["TypeScript", "Tailwind CSS"],
+  "kebutuhanWaktu": "Senin–Jumat, 09.00–17.00",
+  "tes": [
+    { "id": "tes-logika", "jenisTes": "logika", "targetSkor": 80, "batasBawah": 40, "bobot": 0.4 },
+    { "id": "tes-coding", "jenisTes": "coding", "targetSkor": 90, "batasBawah": 50, "bobot": 0.6 }
+  ]
+}
