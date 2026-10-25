@@ -1,0 +1,52 @@
+[
+  {
+    "id": "s1",
+    "urutan": 1,
+    "pertanyaan": "Jika semua kucing adalah hewan, dan Kiki adalah kucing, maka...",
+    "opsi": [
+      { "id": "a", "teks": "Kiki adalah hewan" },
+      { "id": "b", "teks": "Kiki bukan hewan" },
+      { "id": "c", "teks": "Semua hewan adalah kucing" },
+      { "id": "d", "teks": "Tidak dapat disimpulkan" }
+    ],
+    "kunciOpsiId": "a",
+    "poin": 1
+  },
+  {
+    "id": "s2",
+    "urutan": 2,
+    "pertanyaan": "Deret 2, 4, 8, 16, ... Bilangan berikutnya adalah",
+    "opsi": [
+      { "id": "a", "teks": "18" },
+      { "id": "b", "teks": "24" },
+      { "id": "c", "teks": "32" },
+      { "id": "d", "teks": "64" }
+    ],
+    "kunciOpsiId": "c",
+    "poin": 1
+  },
+  {
+    "id": "s3",
+    "urutan": 3,
+    "pertanyaan": "Sebuah tugas selesai dalam 6 jam oleh 2 orang. Berapa jam jika dikerjakan 3 orang dengan kecepatan sama?",
+    "opsi": [
+      { "id": "a", "teks": "3 jam" },
+      { "id": "b", "teks": "4 jam" },
+      { "id": "c", "teks": "9 jam" }
+    ],
+    "kunciOpsiId": "b",
+    "poin": 2
+  },
+  {
+    "id": "s4",
+    "urutan": 4,
+    "pertanyaan": "Soal lama yang sudah dinonaktifkan rekruter",
+    "opsi": [
+      { "id": "a", "teks": "Benar" },
+      { "id": "b", "teks": "Salah" }
+    ],
+    "kunciOpsiId": "a",
+    "poin": 5,
+    "aktif": false
+  }
+]

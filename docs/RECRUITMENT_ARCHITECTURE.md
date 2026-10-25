@@ -16,7 +16,11 @@ Sistem menggunakan arsitektur terpisah antara antarmuka dan peladen:
   - Constraint: UNIQUE (user_id, lowongan_id)
 - **`cv_data`:** kandidat_id, url_cv, status_ekstraksi (`berhasil` | `gagal` | `perlu_tinjau`), skills_mentah (JSON), skills_ternormalisasi (JSON), riwayat_kerja (JSON: `[{perusahaan, mulai, selesai | null}]`), total_bulan_kerja, jumlah_perusahaan
   - `total_bulan_kerja` dan `jumlah_perusahaan` dihitung oleh backend dari `riwayat_kerja`, bukan oleh LLM.
+- **`soal`:** id, lowongan_tes_id, pertanyaan, opsi (JSON: `[{id, teks}]`), kunci_opsi_id, poin (default 1), urutan, aktif (boolean), terkunci (boolean)
+- **`jawaban_kandidat`:** kandidat_id, soal_id, opsi_dipilih (nullable), benar (boolean, dihitung server), dijawab_pada
+  - Constraint: UNIQUE (kandidat_id, soal_id)
 - **`ujian_teknis`:** kandidat_id, lowongan_tes_id, skor_pencapaian, durasi_pengerjaan, dikirim_pada
+  - `skor_pencapaian` dihitung server dari `jawaban_kandidat` saat ujian dikirim, lalu disimpan (tidak dihitung ulang dari soal yang mungkin berubah).
 - **`integritas`:** kandidat_id, status_kamera (`granted` | `denied` | `hardware_not_found` | `not_supported`), jumlah_keluar_fokus, total_detik_keluar_fokus, log_pelanggaran (JSON)
 
 ### Invariant yang divalidasi saat data masuk
@@ -25,6 +29,8 @@ Sistem menggunakan arsitektur terpisah antara antarmuka dan peladen:
 - Setiap `lowongan_tes`: `target_skor > batas_bawah`, `bobot > 0`. Jumlah bobot per lowongan = 1 (toleransi 0,001).
 - `kandidat.ekspektasi_gaji >= 0`.
 - Lamaran hanya bisa dibuat untuk lowongan berstatus `buka`.
+- Setiap `soal`: pertanyaan tidak kosong, 2–6 opsi, id opsi unik, teks opsi tidak kosong, `kunci_opsi_id` adalah salah satu id opsi, `poin > 0`.
+- Lowongan hanya bisa diubah ke status `buka` jika setiap `lowongan_tes` punya minimal 1 soal aktif.
 
 ## 3. Logika Pembobotan (Scoring Engine)
 Scoring engine adalah kumpulan fungsi murni (tanpa akses database). Input: objek lowongan + objek kandidat. Output: skor per komponen + skor akhir.
@@ -82,3 +88,17 @@ Skor dihitung ulang setiap kali data lowongan atau data kandidat berubah. Waktu 
 ## 7. Fitur Pendukung Portofolio
 - **Client-Side Export:** Ekspor CSV/XLSX dilakukan sepenuhnya di memori browser (React) menggunakan library eksternal, tanpa membebani backend.
 - **Dummy Data Seeder:** Skrip Node.js untuk menyuntikkan data fiktif, termasuk variasi skor teknis tinggi tetapi Integrity Signals buruk, fresh graduate tanpa riwayat kerja, dan CV dengan ekstraksi gagal, untuk keperluan demonstrasi portofolio.
+
+## 8. Bank Soal (Ujian Pilihan Ganda)
+Soal adalah data, bukan kode. Rekruter (termasuk calon klien yang mencoba demo) bisa membuat, mengubah, dan mengurutkan soal sendiri tanpa menyentuh kode.
+
+- **Tipe soal:** saat ini hanya pilihan ganda (satu jawaban benar). Tipe lain (esai, isian) belum didukung karena butuh penilaian manual atau LLM.
+- **Penilaian:** `skor_pencapaian = (jumlah poin soal yang dijawab benar / jumlah poin semua soal aktif) × 100`.
+  - Soal yang tidak dijawab saat ujian dikirim dihitung salah.
+  - Sebelum ujian dikirim, tes berstatus "belum dikerjakan" dan scoring engine menghasilkan `null`, bukan 0.
+  - Penilaian berupa fungsi murni di scoring engine dan bisa diuji tanpa database.
+  - Hasilnya masuk ke Skor Tes Kemampuan (bagian 3) lewat normalisasi batas bawah, sama seperti sebelumnya.
+- **Keamanan kunci jawaban:** endpoint soal untuk kandidat tidak pernah menyertakan `kunci_opsi_id`. Penilaian hanya dilakukan di server.
+- **Urutan opsi diacak** per kandidat di browser. Karena jawaban disimpan sebagai id opsi, pengacakan tidak memengaruhi penilaian.
+- **Penguncian soal:** begitu ada satu kandidat yang menjawab sebuah soal, soal itu `terkunci = true` dan tidak bisa diubah atau dihapus, hanya bisa dinonaktifkan. Untuk mengganti isinya, rekruter membuat soal baru. Ini mencegah skor kandidat lama berubah diam-diam atau menjadi tidak bisa dijelaskan.
+- **Seeder** menyediakan satu set soal contoh per tes supaya demo langsung bisa dicoba.

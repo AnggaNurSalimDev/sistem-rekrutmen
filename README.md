@@ -8,7 +8,7 @@ Dokumentasi: [arsitektur](docs/RECRUITMENT_ARCHITECTURE.md) · [roadmap](docs/PR
 
 | Tahap | Isi | Status |
 |---|---|---|
-| 2 | Scoring engine (fungsi murni + test) | Selesai |
+| 2 | Scoring engine + penilaian soal pilihan ganda (fungsi murni + test) | Selesai |
 | 0, 1, 3–6 | Setup, database, parser CV, halaman kandidat & rekruter, seeder | Belum |
 
 ## Menjalankan test
@@ -18,7 +18,7 @@ Butuh Node.js 20 atau lebih baru.
 ```bash
 cd backend
 npm install
-npm test     # 45 test
+npm test     # 60 test
 npm run lint
 ```
 
@@ -35,10 +35,12 @@ backend/
     tenure.js         skor tenure (termasuk fresh graduate)
     tes.js            normalisasi batas bawah + rata-rata tertimbang
     anggaranWaktu.js  skor anggaran & ketersediaan waktu
+    soal.js           validasi soal, penilaian jawaban, versi soal tanpa kunci
   test/
     fixtures/         data lowongan & kandidat (JSON statis)
     komponen.test.js  test per fungsi
     agregat.test.js   test skor akhir dari fixture
+    soal.test.js      test bank soal pilihan ganda
 ```
 
 ## Keputusan desain scoring
@@ -46,6 +48,7 @@ backend/
 - **Data belum lengkap → `null`, bukan 0.** Kandidat yang belum ujian atau CV-nya gagal diekstrak tidak terlihat buruk; dashboard menampilkan "belum lengkap".
 - **Fresh graduate → Tenure 50 (netral) + flag `tanpa_riwayat_kerja`.** Guard ditaruh sebelum pembagian karena `0 / 0` di JavaScript menghasilkan `NaN`, yang tanpa guard jatuh ke cabang skor 100.
 - **Pembulatan hanya sekali di akhir**, supaya selisih pembulatan tidak menumpuk.
+- **Soal ujian adalah data, bukan kode.** Rekruter bisa membuat soal pilihan ganda sendiri; kunci jawaban tidak pernah dikirim ke browser kandidat, dan soal yang sudah dijawab dikunci agar skor lama tidak berubah.
 - **LLM hanya mengekstrak**; semua hitungan (bulan kerja, pencocokan skill) dilakukan di kode yang bisa diuji.
 
 ## Asumsi yang belum diuji dengan data nyata

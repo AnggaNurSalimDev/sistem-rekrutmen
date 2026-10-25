@@ -26,6 +26,7 @@
 - [ ] 1.3 Setup Object Storage privat untuk unggahan PDF. → DoD: berkas hanya bisa diakses lewat signed URL.
 - [ ] 1.4 Registrasi, login (JWT), dan middleware peran (`rekruter` | `kandidat`). → DoD: kandidat mendapat 403 saat mengakses endpoint rekruter.
 - [ ] 1.5 CRUD lowongan dan konfigurasi tes per lowongan (khusus rekruter). → DoD: lowongan tanpa skill wajib, atau bobot tes yang jumlahnya bukan 1, ditolak dengan pesan jelas.
+- [ ] 1.6 CRUD bank soal pilihan ganda per tes (khusus rekruter). → DoD: soal dengan kunci yang bukan salah satu opsi ditolak; soal yang sudah dijawab kandidat tidak bisa diubah atau dihapus (hanya dinonaktifkan); lowongan tidak bisa dibuka jika ada tes tanpa soal aktif.
 
 # 3. Tahap 2 — Scoring Engine (Independen)
 *Dikerjakan lebih awal karena berupa fungsi murni dan bisa diuji tanpa web atau database.*
@@ -43,6 +44,7 @@
   - Ekspektasi gaji sama dengan budget, 15% di atas budget, 16% di atas budget.
   - Skill dengan penulisan berbeda ("ReactJS" vs "react").
   - Ujian belum dikerjakan → skor_akhir null.
+- [x] 2.9 Fungsi validasi soal dan penilaian jawaban pilihan ganda → skor_pencapaian. → DoD: test mencakup soal tidak dijawab = salah, poin berbeda per soal, soal nonaktif tidak dihitung, jawaban untuk soal asing atau opsi asing ditolak.
 
 # 4. Tahap 3 — AI Parser & Extraction
 - [ ] 3.1 Integrasi backend dengan API LLM / Ollama.
@@ -52,7 +54,7 @@
 
 # 5. Tahap 4 — Halaman Kandidat
 - [ ] 4.1 Daftar lowongan terbuka dan formulir lamaran (data diri, ekspektasi gaji, pertanyaan ketersediaan waktu, persetujuan data, upload CV).
-- [ ] 4.2 Modul ujian teknis antarmuka. → DoD: hasil ujian tersimpan per jenis tes.
+- [ ] 4.2 Modul ujian pilihan ganda (soal dari bank soal, urutan opsi diacak). → DoD: hasil ujian tersimpan per jenis tes; respons API soal untuk kandidat tidak memuat kunci jawaban.
 - [ ] 4.3 Modul Integrity Signals: deteksi keluar fokus berbasis episode dan request kamera. → DoD: satu kali pindah tab tercatat 1 episode, bukan 2.
 - [ ] 4.4 Penanganan edge case kamera tidak tersedia atau ditolak (kirim status tanpa blokir). → DoD: ujian tetap bisa diselesaikan di perangkat tanpa kamera.
 
@@ -62,6 +64,7 @@
 - [ ] 5.3 Visualisasi grafik metrik.
 - [ ] 5.4 Tampilan metrik Integrity Signals berdampingan dengan skor ujian (contoh: "Out of focus: 3x / 14 detik", "Akses Kamera: hardware_not_found").
 - [ ] 5.5 Client-side Export ke CSV/XLSX.
+- [ ] 5.6 Halaman kelola soal per tes (tambah, ubah, urutkan, nonaktifkan, pratinjau seperti yang dilihat kandidat). → DoD: soal terkunci ditampilkan sebagai tidak bisa diubah, dengan alasan yang jelas.
 
 # 7. Tahap 6 — Dummy Data Seeder
 - [ ] 6.1 Pembuatan skrip injeksi database (termasuk akun rekruter dan kandidat demo).
@@ -70,3 +73,4 @@
   - Kandidat B: skor sedang, clean.
   - Kandidat C: fresh graduate tanpa riwayat kerja.
   - Kandidat D: ekstraksi CV gagal (menunggu tinjauan manual).
+- [ ] 6.3 Set soal contoh pilihan ganda untuk setiap tes demo, beserta jawaban kandidat A–D yang konsisten dengan skor mereka.
