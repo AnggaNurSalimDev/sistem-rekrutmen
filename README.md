@@ -11,7 +11,7 @@ Dokumentasi: [arsitektur](docs/RECRUITMENT_ARCHITECTURE.md) · [API contract](do
 | 0 | API contract | Selesai (folder frontend menyusul di Tahap 4) |
 | 1 | Server Express, skema database, storage privat, login & peran, CRUD lowongan, bank soal | Selesai |
 | 2 | Scoring engine + penilaian soal pilihan ganda | Selesai |
-| 3 | Parser CV: ekstraksi teks PDF, parser regex, orkestrator mode regex/ai/gabungan | Sebagian (parser AI dan uji dengan CV asli belum) |
+| 3 | Parser CV: ekstraksi teks PDF, parser regex dengan paket kamus (Kru Outlet) dan sorotan untuk HR, orkestrator mode regex/ai/gabungan | Sebagian (parser AI dan uji dengan CV asli belum) |
 | 4–6 | Halaman kandidat & rekruter, seeder | Belum |
 
 ## Menjalankan di komputer sendiri
@@ -56,8 +56,8 @@ Server menolak menyala jika konfigurasi kurang atau database tidak bisa dihubung
 ## Test
 
 ```bash
-npm test                  # 93 unit test (scoring engine + parser CV, tanpa database)
-npm run test:integration  # 41 test endpoint ke PostgreSQL sungguhan
+npm test                  # 111 unit test (scoring engine + parser CV, tanpa database)
+npm run test:integration  # 48 test endpoint ke PostgreSQL sungguhan
 npm run test:all          # keduanya
 npm run lint
 ```
@@ -78,10 +78,11 @@ backend/
       pool.js            koneksi + helper transaksi
     auth/                hash password (scrypt), JWT, requireAuth, requireRole
     http/                format error, validasi body (zod)
-    routes/              health, auth, lowongan, soal, files
+    routes/              health, auth, lowongan, soal, files, paket-kamus
     storage/             storage disk lokal + signed URL
     scoring/             fungsi murni: skor kandidat, validasi, penilaian soal
     cv/                  PDF → teks, parser regex, orkestrator mode parser
+      paket/             paket kamus per bidang (teknologi-perkantoran, kru-outlet)
   scripts/
     buat-pdf-contoh.py   membuat ulang PDF contoh untuk test (butuh reportlab)
   test/
@@ -95,6 +96,7 @@ docs/
 ## Keputusan desain
 
 **Scoring**
+- **Skor sementara sampai HR memverifikasi CV.** Hasil parser langsung dipakai untuk skor supaya HR bisa mengurutkan kandidat sejak awal, tetapi selalu berlabel "belum diverifikasi" sampai HR menekan konfirmasi.
 - **Data belum lengkap → `null`, bukan 0.** Kandidat yang belum ujian atau CV-nya gagal diekstrak tidak terlihat buruk; dashboard menampilkan "belum lengkap".
 - **Fresh graduate → Tenure 50 (netral) + flag `tanpa_riwayat_kerja`.** Guard ditaruh sebelum pembagian karena `0 / 0` di JavaScript menghasilkan `NaN`, yang tanpa guard jatuh ke cabang skor 100.
 - **Pembulatan hanya sekali di akhir**, supaya selisih pembulatan tidak menumpuk.
@@ -109,6 +111,8 @@ docs/
 **Parser CV**
 - **Tiga mode, satu bentuk output.** `regex` (gratis, lokal, bisa dijelaskan), `ai`, atau `gabungan` (AI hanya untuk CV yang membuat regex ragu). Scoring engine tidak tahu dan tidak perlu tahu sumbernya.
 - **Parser tidak pernah menolak lamaran.** CV yang meragukan diberi status `perlu_tinjau` beserta alasannya (misalnya "2 rentang kerja hanya menyebut tahun"), lalu dikoreksi HR.
+- **Paket kamus per bidang.** Regex hanya menemukan apa yang ada di kamusnya, jadi HR memilih paket sesuai lowongan. Paket Kru Outlet juga mengenali merek seperti Indomaret atau Kopi Kenangan sebagai tempat kerja, dan menyorot hal non-skill seperti SIM C atau "bersedia kerja shift".
+- **Sorotan untuk HR.** Setiap temuan disimpan beserta posisinya di teks CV, tanpa tumpang tindih, sehingga frontend cukup mewarnainya.
 - **Bagian CV dikenali.** Tanggal di bagian Pendidikan dan Pengalaman Organisasi tidak dihitung sebagai pengalaman kerja.
 - **Longest match untuk skill.** "Tailwind CSS" tidak ikut menghasilkan "CSS". Akibatnya, kandidat yang hanya menulis "Tailwind CSS" tidak dianggap punya skill "CSS"; jika HR menganggapnya setara, tambahkan alias.
 

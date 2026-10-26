@@ -7,6 +7,7 @@ import { ruteAuth } from './routes/auth.js';
 import { ruteLowongan } from './routes/lowongan.js';
 import { ruteSoalPerTes, ruteSoal } from './routes/soal.js';
 import { ruteFiles } from './routes/files.js';
+import { rutePaketKamus } from './routes/paketKamus.js';
 
 /**
  * Membuat aplikasi Express tanpa menyalakan server, supaya bisa diuji
@@ -29,6 +30,7 @@ export function buatApp({ pool, config, storage, log = console }) {
   app.use('/tes/:tesId/soal', ruteSoalPerTes(deps));
   app.use('/soal', ruteSoal(deps));
   app.use('/files', ruteFiles(deps));
+  app.use('/paket-kamus', rutePaketKamus(deps));
 
   app.use(notFoundHandler);
   app.use(buatErrorHandler({ log }));

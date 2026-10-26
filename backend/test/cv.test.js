@@ -9,7 +9,8 @@ import { hitungRiwayatKerja } from '../src/scoring/riwayatKerja.js';
 const ACUAN = '2026-10-26';
 const cv = (nama) => readFileSync(new URL(`./fixtures/cv/${nama}`, import.meta.url), 'utf8');
 const pdf = (nama) => readFileSync(new URL(`./fixtures/pdf/${nama}`, import.meta.url));
-const parse = (teks, opsi = {}) => parseCvRegex(teks, { tanggalAcuan: ACUAN, ...opsi });
+const TEKNO = ['teknologi-perkantoran'];
+const parse = (teks, opsi = {}) => parseCvRegex(teks, { tanggalAcuan: ACUAN, paket: TEKNO, ...opsi });
 
 describe('3.2 Rentang tanggal', () => {
   const rentang = (baris) =>
@@ -154,6 +155,7 @@ describe('3.2 Parser regex: riwayat kerja', () => {
     assert.throws(() => parseCvRegex(null, { tanggalAcuan: ACUAN }));
     assert.throws(() => parseCvRegex('teks', { tanggalAcuan: '26-10-2026' }));
     assert.throws(() => parseCvRegex('teks', { tanggalAcuan: ACUAN, skillLowongan: 'React' }));
+    assert.throws(() => parseCvRegex('teks', { tanggalAcuan: ACUAN, paket: ['tidak-ada'] }), /tidak dikenal/);
   });
 });
 
@@ -220,7 +222,7 @@ describe('3.3 Orkestrator mode parser', () => {
 
   test('mode regex tidak pernah memanggil AI', async () => {
     const ai = aiPalsu(dataAi);
-    const hasil = await parseCv({ teks: cv('tahun-saja.txt'), mode: 'regex', parserAi: ai, tanggalAcuan: ACUAN });
+    const hasil = await parseCv({ teks: cv('tahun-saja.txt'), mode: 'regex', parserAi: ai, paket: TEKNO, tanggalAcuan: ACUAN });
     assert.equal(ai.dipanggil, 0);
     assert.equal(hasil.sumber, 'regex');
     assert.equal(hasil.status, 'perlu_tinjau');
@@ -228,7 +230,7 @@ describe('3.3 Orkestrator mode parser', () => {
 
   test('DoD 3.3: gabungan + keyakinan tinggi → AI tidak dipanggil', async () => {
     const ai = aiPalsu(dataAi);
-    const hasil = await parseCv({ teks: cv('id-rapi.txt'), mode: 'gabungan', parserAi: ai, tanggalAcuan: ACUAN });
+    const hasil = await parseCv({ teks: cv('id-rapi.txt'), mode: 'gabungan', parserAi: ai, paket: TEKNO, tanggalAcuan: ACUAN });
     assert.equal(ai.dipanggil, 0);
     assert.equal(hasil.status, 'berhasil');
     assert.equal(hasil.sumber, 'regex');
@@ -236,7 +238,7 @@ describe('3.3 Orkestrator mode parser', () => {
 
   test('DoD 3.3: gabungan + keyakinan rendah → AI dipanggil, hasil AI dipakai', async () => {
     const ai = aiPalsu(dataAi);
-    const hasil = await parseCv({ teks: cv('tahun-saja.txt'), mode: 'gabungan', parserAi: ai, tanggalAcuan: ACUAN });
+    const hasil = await parseCv({ teks: cv('tahun-saja.txt'), mode: 'gabungan', parserAi: ai, paket: TEKNO, tanggalAcuan: ACUAN });
     assert.equal(ai.dipanggil, 1);
     assert.equal(hasil.sumber, 'ai');
     assert.deepEqual(hasil.riwayatKerja, dataAi.riwayatKerja);
@@ -244,7 +246,7 @@ describe('3.3 Orkestrator mode parser', () => {
 
   test('gabungan + AI gagal dua kali → kembali ke hasil regex, alasan dicatat', async () => {
     const ai = aiPalsu({ skills: 'bukan array' });
-    const hasil = await parseCv({ teks: cv('tahun-saja.txt'), mode: 'gabungan', parserAi: ai, tanggalAcuan: ACUAN });
+    const hasil = await parseCv({ teks: cv('tahun-saja.txt'), mode: 'gabungan', parserAi: ai, paket: TEKNO, tanggalAcuan: ACUAN });
     assert.equal(ai.dipanggil, 2);
     assert.equal(hasil.sumber, 'regex');
     assert.equal(hasil.status, 'perlu_tinjau');

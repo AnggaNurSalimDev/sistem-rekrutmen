@@ -1,14 +1,15 @@
 /**
- * Skill umum yang dicari parser regex selain skill dari lowongan.
- * Ditulis dalam bentuk tampilan; pencocokan memakai normalisasiSkill
- * (huruf kecil, tanpa tanda baca, kamus alias) dari scoring engine.
+ * Paket untuk lowongan IT, perkantoran, analitik, dan desain.
+ *
+ * Alias umum teknologi ("ReactJS" → React, "JS" → JavaScript) sudah
+ * ditangani kamus alias scoring engine, jadi tidak perlu ditulis di sini.
  *
  * Sengaja tidak memuat kata yang juga kata sehari-hari (misalnya "Word"
  * tanpa "Microsoft", atau ".NET" yang sama dengan kata "net"), karena regex
  * tidak bisa membedakan konteks. Skill seperti itu tetap bisa dicari jika
  * HR menuliskannya di skill lowongan.
  */
-export const KAMUS_SKILL_UMUM = Object.freeze([
+const NAMA = [
   // Web & mobile
   'HTML', 'CSS', 'JavaScript', 'TypeScript', 'React', 'React Native', 'Vue', 'Angular', 'Next.js', 'Nuxt',
   'Node.js', 'Express', 'Tailwind CSS', 'Bootstrap', 'Sass', 'jQuery', 'Redux', 'Vite', 'Webpack',
@@ -28,4 +29,11 @@ export const KAMUS_SKILL_UMUM = Object.freeze([
   'Microsoft Office', 'Microsoft Word', 'PowerPoint', 'SAP', 'Accurate', 'Akuntansi', 'Perpajakan',
   'Digital Marketing', 'SEO', 'Copywriting', 'Social Media Marketing', 'Customer Service', 'Public Speaking',
   'Negosiasi', 'Jira', 'Trello', 'Scrum', 'Agile',
-]);
+];
+
+export default {
+  id: 'teknologi-perkantoran',
+  nama: 'Teknologi & Perkantoran',
+  deskripsi: 'Pemrograman, data, desain, dan aplikasi perkantoran.',
+  skill: NAMA.map((nama) => ({ nama })),
+};

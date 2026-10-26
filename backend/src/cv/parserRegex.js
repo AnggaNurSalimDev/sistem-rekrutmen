@@ -1,5 +1,5 @@
 import { normalisasiSkill } from '../scoring/skills.js';
-import { KAMUS_SKILL_UMUM } from './kamusSkill.js';
+import { ambilPaket } from './paket/index.js';
 import { cariRentangTanggal } from './tanggal.js';
 
 // ---------------------------------------------------------------- bagian CV
@@ -41,8 +41,22 @@ function bagianDariJudul(baris) {
 
 // ------------------------------------------------------- nama perusahaan
 
-const PENANDA_BADAN_USAHA =
-  /(?<![\p{L}])(pt|cv|ud|pd|tbk|persero|perum|koperasi|yayasan|firma|inc|ltd|llc|corp|corporation|company|co\.|group|grup|gmbh|pte|sdn bhd)(?![\p{L}])/iu;
+const PENANDA_BADAN_USAHA = [
+  'pt', 'cv', 'ud', 'pd', 'tbk', 'persero', 'perum', 'koperasi', 'yayasan', 'firma', 'inc', 'ltd', 'llc',
+  'corp', 'corporation', 'company', 'co.', 'group', 'grup', 'gmbh', 'pte', 'sdn bhd',
+];
+
+const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** Penanda badan usaha bawaan + penanda dari paket (contoh "Indomaret", "kafe"). */
+function buatPolaPenanda(tambahan) {
+  const semua = [...new Set([...PENANDA_BADAN_USAHA, ...tambahan].map((t) => t.toLowerCase().trim()))]
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length)
+    .map((t) => escapeRegex(t).replace(/\s+/g, '\\s+'));
+  return new RegExp(`(?<![\\p{L}])(?:${semua.join('|')})(?![\\p{L}])`, 'iu');
+}
+
 const PENANDA_DI = /(?:^|\s)(?:at|di|@)\s+(.+)$/i;
 const POLA_PENDIDIKAN =
   /(?<![\p{L}])(universitas|university|institut|institute|politeknik|polytechnic|sekolah|school|college|akademi|sma|smk|smp|ma|s1|s2|s3|d3|d4|sarjana|bachelor|master|jurusan|ipk|gpa)(?![\p{L}])/iu;
@@ -59,14 +73,14 @@ function bersihkan(teks) {
  * Penanda "di/at/@" hanya dipakai di baris tanggal itu sendiri; di baris
  * deskripsi kata "di" terlalu umum ("bertanggung jawab di gudang").
  */
-function ambilPerusahaanBerpenanda(teks, { izinkanDi }) {
+function ambilPerusahaanBerpenanda(teks, { izinkanDi, penanda }) {
   const di = izinkanDi ? PENANDA_DI.exec(teks) : null;
   if (di) {
     const sesudahDi = bersihkan(di[1].split(PEMISAH_BAGIAN_BARIS)[0]);
     if (sesudahDi) return sesudahDi;
   }
   for (const bagian of teks.split(PEMISAH_BAGIAN_BARIS)) {
-    if (PENANDA_BADAN_USAHA.test(bagian)) return bersihkan(bagian);
+    if (penanda.test(bagian)) return bersihkan(bagian);
   }
   return null;
 }
@@ -78,91 +92,171 @@ function sisaBaris(baris, rentang) {
 
 // ------------------------------------------------------------------ skill
 
-function siapkanKamus(skillTambahan) {
-  const kamus = new Map();
-  for (const tampil of [...skillTambahan, ...KAMUS_SKILL_UMUM]) {
-    if (typeof tampil !== 'string') continue;
-    const normal = normalisasiSkill(tampil);
-    if (normal && !kamus.has(normal)) kamus.set(normal, tampil.trim());
+/**
+ * Kamus = skill lowongan (istilah HR) + skill dari paket.
+ * Semua penulisan (nama + alias) dipetakan ke satu grup. Jika istilah HR
+ * sama dengan salah satu penulisan di paket ("Cashier" vs paket "Kasir"),
+ * grupnya memakai istilah HR, supaya hasil parser cocok dengan skill wajib
+ * lowongan di scoring engine.
+ */
+function siapkanKamus(skillLowongan, daftarPaket) {
+  const peta = new Map();
+  const persis = new Map();
+  const denganMiring = [];
+
+  function tambah(tampil, penulisan, singkatan = []) {
+    const kunci = penulisan.map(normalisasiSkill).filter(Boolean);
+    if (kunci.length === 0) return;
+    let grup = kunci.map((k) => peta.get(k)).find(Boolean);
+    if (!grup) {
+      grup = { tampil: tampil.trim() };
+      if (grup.tampil.includes('/')) denganMiring.push(grup);
+    }
+    for (const k of kunci) if (!peta.has(k)) peta.set(k, grup);
+    for (const t of singkatan) if (!persis.has(t)) persis.set(t, grup);
   }
-  return kamus;
+
+  for (const s of skillLowongan) if (typeof s === 'string' && s.trim()) tambah(s, [s]);
+  for (const paket of daftarPaket) {
+    for (const s of paket.skill) tambah(s.nama, [s.nama, ...(s.alias ?? [])], s.persis ?? []);
+  }
+  return { peta, persis, denganMiring };
 }
 
-const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const POLA_KATA = /[\p{L}\p{N}][\p{L}\p{N}+#.]*/gu;
+const BATAS_FRASA = /[\n,;/|•·()[\]]|\s[-–—]\s|\.(?:\s|$)/;
+
+/** Kata beserta posisinya, dikelompokkan per frasa. */
+function kataPerFrasa(teks) {
+  const frasa = [];
+  let sekarang = [];
+  let akhirSebelum = 0;
+  for (const m of teks.matchAll(POLA_KATA)) {
+    const kata = m[0].replace(/\.+$/, '');
+    const awal = m.index;
+    if (sekarang.length > 0 && BATAS_FRASA.test(teks.slice(akhirSebelum, awal))) {
+      frasa.push(sekarang);
+      sekarang = [];
+    }
+    sekarang.push({ kata, awal, akhir: awal + kata.length });
+    akhirSebelum = awal + kata.length;
+  }
+  if (sekarang.length > 0) frasa.push(sekarang);
+  return frasa;
+}
 
 /**
- * Teks dipecah per frasa (koma, titik koma, garis miring, baris, bullet),
- * lalu 1–3 kata berurutan di dalam frasa yang sama dicocokkan ke kamus.
+ * 1–3 kata berurutan di dalam frasa yang sama dicocokkan ke kamus.
  *
  * Longest match: kata yang sudah menjadi bagian skill yang lebih panjang
- * tidak dipakai lagi ("Tailwind CSS" tidak ikut menghasilkan "CSS",
- * "React Native" tidak ikut menghasilkan "React").
+ * tidak dipakai lagi ("Tailwind CSS" tidak ikut menghasilkan "CSS").
  *
- * Skill pendek (≤ 2 huruf setelah normalisasi, contoh "C", "R", "Go") wajib
- * ditulis persis sama dengan kamus, karena rawan salah tangkap.
+ * Skill pendek (≤ 2 huruf setelah normalisasi, contoh "C", "Go") wajib
+ * ditulis persis sama dengan nama tampilannya dan dicatat untuk ditinjau.
+ * Singkatan di daftar "persis" paket (contoh "POS") juga wajib sama persis,
+ * tapi tidak dicatat, karena paket sudah memutuskan singkatan itu aman.
+ *
+ * Setiap kemunculan dicatat sebagai sorotan, bukan hanya yang pertama.
  */
 function cariSkill(teks, kamus) {
   const ditemukan = new Map();
   const skillPendek = new Set();
+  const sorotan = [];
+  const catat = (grup, awal, akhir) => {
+    if (!ditemukan.has(grup)) ditemukan.set(grup, grup.tampil);
+    sorotan.push({ awal, akhir, kategori: 'skill', label: grup.tampil });
+  };
 
-  // Skill yang memuat garis miring ("UI/UX", "CI/CD") dicari utuh lebih dulu,
-  // karena di langkah berikutnya garis miring dipakai sebagai pemisah daftar.
-  for (const [normal, tampil] of kamus) {
-    if (!tampil.includes('/')) continue;
-    const re = new RegExp(`(?<![\\p{L}\\p{N}])${escapeRegex(tampil)}(?![\\p{L}\\p{N}])`, 'iu');
-    if (re.test(teks)) ditemukan.set(normal, tampil);
+  // Skill dengan garis miring ("UI/UX") dicari utuh, karena garis miring
+  // juga dipakai sebagai pemisah daftar ("React/Vue").
+  for (const grup of kamus.denganMiring) {
+    const re = new RegExp(`(?<![\\p{L}\\p{N}])${escapeRegex(grup.tampil)}(?![\\p{L}\\p{N}])`, 'giu');
+    for (const m of teks.matchAll(re)) catat(grup, m.index, m.index + m[0].length);
   }
 
-  const frasa = teks.split(/[\n,;/|•·()[\]]+|\s[-–—]\s|\.\s/);
-  for (const f of frasa) {
-    const kata = f.match(/[\p{L}\p{N}][\p{L}\p{N}+#.]*/gu) ?? [];
-    const bersih = kata.map((k) => k.replace(/\.+$/, ''));
-    const terpakai = new Array(bersih.length).fill(false);
-
+  for (const kata of kataPerFrasa(teks)) {
+    const terpakai = new Array(kata.length).fill(false);
     for (let panjang = 3; panjang >= 1; panjang--) {
-      for (let i = 0; i + panjang <= bersih.length; i++) {
+      for (let i = 0; i + panjang <= kata.length; i++) {
         if (terpakai.slice(i, i + panjang).some(Boolean)) continue;
-        const asli = bersih.slice(i, i + panjang).join(' ');
-        const normal = normalisasiSkill(asli);
-        if (!normal || !kamus.has(normal)) continue;
+        const asli = kata
+          .slice(i, i + panjang)
+          .map((k) => k.kata)
+          .join(' ');
 
-        const tampil = kamus.get(normal);
-        let pendek = false;
-        if (normal.length <= 2) {
-          // "Golang" → "go" lewat alias: bentuk panjangnya tidak ambigu.
-          const bentukPanjang = asli.replace(/[^\p{L}\p{N}]/gu, '').length > 2;
-          if (!bentukPanjang && asli !== tampil) continue;
-          pendek = !bentukPanjang;
+        let grup = kamus.persis.get(asli);
+        if (!grup) {
+          const normal = normalisasiSkill(asli);
+          grup = normal ? kamus.peta.get(normal) : undefined;
+          if (!grup) continue;
+          if (normal.length <= 2) {
+            // "Golang" → "go" lewat alias: bentuk panjangnya tidak ambigu.
+            const bentukPanjang = asli.replace(/[^\p{L}\p{N}]/gu, '').length > 2;
+            if (!bentukPanjang && asli !== grup.tampil) continue;
+            if (!bentukPanjang) skillPendek.add(grup.tampil);
+          }
         }
 
         terpakai.fill(true, i, i + panjang);
-        if (ditemukan.has(normal)) continue;
-        if (pendek) skillPendek.add(tampil);
-        ditemukan.set(normal, tampil);
+        catat(grup, kata[i].awal, kata[i + panjang - 1].akhir);
       }
     }
   }
-  return { skills: [...ditemukan.values()], skillPendek: [...skillPendek] };
+  return { skills: [...ditemukan.values()], skillPendek: [...skillPendek], sorotan };
+}
+
+// ------------------------------------------------------------ kata kunci paket
+
+function cariKataKunci(teks, daftarPaket) {
+  const temuan = new Map();
+  const sorotan = [];
+  for (const paket of daftarPaket) {
+    for (const k of paket.kataKunci ?? []) {
+      for (const pola of k.pola) {
+        for (const m of teks.matchAll(new RegExp(pola, 'giu'))) {
+          if (m[0].length === 0) continue;
+          sorotan.push({ awal: m.index, akhir: m.index + m[0].length, kategori: k.kategori, label: k.label });
+          temuan.set(k.label, { label: k.label, kategori: k.kategori });
+        }
+      }
+    }
+  }
+  return { temuanLain: [...temuan.values()], sorotan };
 }
 
 // ------------------------------------------------------------ riwayat kerja
 
+/** Baris beserta posisi awalnya di teks asli (setelah spasi di depan). */
+function pecahBaris(teks) {
+  const hasil = [];
+  let posisi = 0;
+  for (const mentah of teks.split('\n')) {
+    const spasiDepan = mentah.length - mentah.trimStart().length;
+    hasil.push({ teks: mentah.trim(), offset: posisi + spasiDepan });
+    posisi += mentah.length + 1;
+  }
+  return hasil;
+}
+
 function petakanBagian(baris) {
   let sekarang = null;
   return baris.map((b) => {
-    const judul = bagianDariJudul(b);
+    const judul = bagianDariJudul(b.teks);
     if (judul) {
       sekarang = judul;
-      return { teks: b, bagian: judul, judul: true };
+      return { ...b, bagian: judul, judul: true };
     }
-    return { teks: b, bagian: sekarang, judul: false };
+    return { ...b, bagian: sekarang, judul: false };
   });
 }
 
-function cariRiwayatKerja(baris, tahunMaks) {
+function cariRiwayatKerja(baris, { tahunMaks, penanda }) {
   const terpeta = petakanBagian(baris);
   const adaJudulPengalaman = terpeta.some((b) => b.judul && b.bagian === 'pengalaman');
   const adaJudul = terpeta.some((b) => b.judul);
+  const sorotan = terpeta
+    .filter((b) => b.judul)
+    .map((b) => ({ awal: b.offset, akhir: b.offset + b.teks.length, kategori: 'bagian', label: b.teks }));
 
   // 1. Kumpulkan rentang tanggal yang termasuk riwayat kerja.
   //    - Ada judul "Pengalaman": hanya bagian itu.
@@ -202,13 +296,14 @@ function cariRiwayatKerja(baris, tahunMaks) {
       });
 
   // 2. Arah dominan letak nama perusahaan (di atas atau di bawah tanggal).
+  //    Baris bullet tidak dihitung: deskripsi tugas ("menjaga kebersihan
+  //    outlet") bisa memuat kata penanda tanpa menyebut tempat kerja.
   let skorAtas = 0;
   let skorBawah = 0;
+  const berpenanda = (j) => j !== undefined && !AWALAN_BULLET.test(terpeta[j].teks) && penanda.test(terpeta[j].teks);
   for (const e of entriKerja) {
-    const atas = tetangga(e.i, -1)[0];
-    const bawah = tetangga(e.i, 1)[0];
-    if (atas !== undefined && PENANDA_BADAN_USAHA.test(terpeta[atas].teks)) skorAtas++;
-    if (bawah !== undefined && PENANDA_BADAN_USAHA.test(terpeta[bawah].teks)) skorBawah++;
+    if (berpenanda(tetangga(e.i, -1)[0])) skorAtas++;
+    if (berpenanda(tetangga(e.i, 1)[0])) skorBawah++;
   }
   const urutanArah = skorAtas > skorBawah ? [-1, 1] : [1, -1];
 
@@ -218,6 +313,14 @@ function cariRiwayatKerja(baris, tahunMaks) {
   let jumlahDitebak = 0;
   let jumlahTahunSaja = 0;
 
+  const sorot = (j, potongan, kategori, label) => {
+    const di = terpeta[j].teks.indexOf(potongan);
+    if (potongan && di >= 0) {
+      const awal = terpeta[j].offset + di;
+      sorotan.push({ awal, akhir: awal + potongan.length, kategori, label });
+    }
+  };
+
   for (const { i, rentang } of entriKerja) {
     const kandidatBaris = [
       { j: i, teks: sisaBaris(terpeta[i].teks, rentang) },
@@ -225,10 +328,12 @@ function cariRiwayatKerja(baris, tahunMaks) {
     ].filter((k) => k.j === i || !terklaim.has(k.j));
 
     let perusahaan = null;
+    let barisPerusahaan = null;
     for (const k of kandidatBaris) {
       if (AWALAN_BULLET.test(k.teks)) continue;
-      perusahaan = ambilPerusahaanBerpenanda(k.teks, { izinkanDi: k.j === i });
+      perusahaan = ambilPerusahaanBerpenanda(k.teks, { izinkanDi: k.j === i, penanda });
       if (perusahaan) {
+        barisPerusahaan = k.j;
         if (k.j !== i) terklaim.add(k.j);
         break;
       }
@@ -238,69 +343,114 @@ function cariRiwayatKerja(baris, tahunMaks) {
       const tebakan = kandidatBaris.find((k) => k.teks && !AWALAN_BULLET.test(k.teks));
       if (tebakan) {
         perusahaan = bersihkan(tebakan.teks.split(PEMISAH_BAGIAN_BARIS).filter(Boolean)[0] ?? '');
+        barisPerusahaan = tebakan.j;
         if (tebakan.j !== i) terklaim.add(tebakan.j);
       }
       jumlahDitebak++;
     }
 
     if (rentang.tahunSaja) jumlahTahunSaja++;
-    riwayat.push({ perusahaan: perusahaan || '(tidak terbaca)', mulai: rentang.mulai, selesai: rentang.selesai });
+    const data = { perusahaan: perusahaan || '(tidak terbaca)', mulai: rentang.mulai, selesai: rentang.selesai };
+    riwayat.push(data);
+
+    const awal = terpeta[i].offset + rentang.awal;
+    sorotan.push({
+      awal,
+      akhir: terpeta[i].offset + rentang.akhir,
+      kategori: 'tanggal',
+      label: `${data.mulai} s/d ${data.selesai ?? 'sekarang'}`,
+    });
+    if (barisPerusahaan !== null) sorot(barisPerusahaan, perusahaan, 'perusahaan', data.perusahaan);
   }
 
-  return { riwayat, adaJudul, adaJudulPengalaman, jumlahDitebak, jumlahTahunSaja };
+  return { riwayat, adaJudul, adaJudulPengalaman, jumlahDitebak, jumlahTahunSaja, sorotan };
+}
+
+// --------------------------------------------------------------- sorotan
+
+// Saat dua sorotan bertumpuk, yang lebih penting untuk skor dipertahankan.
+const PRIORITAS = Object.freeze({
+  tanggal: 6,
+  perusahaan: 5,
+  sertifikat: 4,
+  ketersediaan: 4,
+  skill: 3,
+  jabatan: 2,
+  bagian: 1,
+});
+
+/**
+ * Sorotan tanpa tumpang tindih, urut posisi. Frontend cukup memotong teks
+ * di setiap awal/akhir dan mewarnai potongannya; tidak perlu logika lain.
+ */
+export function rapikanSorotan(daftar) {
+  const terpilih = [];
+  const urut = [...daftar].sort(
+    (a, b) => PRIORITAS[b.kategori] - PRIORITAS[a.kategori] || b.akhir - b.awal - (a.akhir - a.awal) || a.awal - b.awal,
+  );
+  for (const s of urut) {
+    if (s.akhir <= s.awal) continue;
+    if (terpilih.some((t) => s.awal < t.akhir && s.akhir > t.awal)) continue;
+    terpilih.push(s);
+  }
+  return terpilih.sort((a, b) => a.awal - b.awal);
 }
 
 // ------------------------------------------------------------------ utama
 
 /**
- * Teks CV → data mentah dengan bentuk yang sama seperti parser AI.
+ * Teks CV → data mentah + sorotan untuk dilihat HR.
  * Tidak menghitung apa pun (total bulan dan skor dihitung scoring engine).
  *
  * @param {string} teks hasil ekstrakTeksPdf
  * @param {object} opsi
- * @param {string[]} [opsi.skillLowongan] skill wajib + opsional lowongan, ditambahkan ke kamus
+ * @param {string[]} [opsi.skillLowongan] skill wajib + opsional lowongan
+ * @param {string[]} [opsi.paket] id paket kamus (contoh ['kru-outlet'])
  * @param {string} opsi.tanggalAcuan "YYYY-MM-DD" (tanggal lamaran); tahun di atasnya dianggap bukan tanggal
+ * @returns {{skills, riwayatKerja, temuanLain, sorotan, keyakinan, alasanTinjau}}
+ *   sorotan: [{awal, akhir, kategori, label}] — posisi karakter di `teks`
  */
-export function parseCvRegex(teks, { skillLowongan = [], tanggalAcuan } = {}) {
+export function parseCvRegex(teks, { skillLowongan = [], paket = [], tanggalAcuan } = {}) {
   if (typeof teks !== 'string') throw new Error('teks CV harus berupa string');
   if (!Array.isArray(skillLowongan)) throw new Error('skillLowongan harus berupa array');
   const tahunAcuan = Number(/^(\d{4})-\d{2}-\d{2}$/.exec(tanggalAcuan ?? '')?.[1]);
   if (!Number.isInteger(tahunAcuan)) throw new Error('tanggalAcuan wajib berformat YYYY-MM-DD');
+  const daftarPaket = ambilPaket(paket);
 
-  const baris = teks.split('\n').map((b) => b.trim());
-  const { skills, skillPendek } = cariSkill(teks, siapkanKamus(skillLowongan));
-  const { riwayat, adaJudul, adaJudulPengalaman, jumlahDitebak, jumlahTahunSaja } = cariRiwayatKerja(
-    baris,
-    tahunAcuan + 1,
-  );
+  const penanda = buatPolaPenanda(daftarPaket.flatMap((p) => p.penandaPerusahaan ?? []));
+  const skill = cariSkill(teks, siapkanKamus(skillLowongan, daftarPaket));
+  const kataKunci = cariKataKunci(teks, daftarPaket);
+  const kerja = cariRiwayatKerja(pecahBaris(teks), { tahunMaks: tahunAcuan + 1, penanda });
 
   const alasan = [];
-  if (!adaJudulPengalaman) {
+  if (!kerja.adaJudulPengalaman) {
     alasan.push(
-      adaJudul
+      kerja.adaJudul
         ? 'Judul bagian "Pengalaman Kerja" tidak ditemukan; hanya teks sebelum judul bagian pertama yang diperiksa.'
         : 'CV tidak punya judul bagian; riwayat kerja dicari di seluruh CV.',
     );
   }
-  if (riwayat.length === 0) {
+  if (kerja.riwayat.length === 0) {
     alasan.push('Tidak ada riwayat kerja terdeteksi. Pastikan kandidat memang belum pernah bekerja.');
   }
-  if (jumlahDitebak > 0) {
-    alasan.push(`${jumlahDitebak} nama perusahaan hanya ditebak (tidak ada penanda seperti PT/CV/Inc).`);
+  if (kerja.jumlahDitebak > 0) {
+    alasan.push(`${kerja.jumlahDitebak} nama perusahaan hanya ditebak (tidak ada penanda seperti PT/CV/Inc).`);
   }
-  if (jumlahTahunSaja > 0) {
-    alasan.push(`${jumlahTahunSaja} rentang kerja hanya menyebut tahun; bulan diasumsikan Januari–Desember.`);
+  if (kerja.jumlahTahunSaja > 0) {
+    alasan.push(`${kerja.jumlahTahunSaja} rentang kerja hanya menyebut tahun; bulan diasumsikan Januari–Desember.`);
   }
-  for (const s of skillPendek) {
+  for (const s of skill.skillPendek) {
     alasan.push(`Skill pendek "${s}" ditemukan; pastikan bukan kata biasa.`);
   }
-  if (skills.length === 0) {
+  if (skill.skills.length === 0) {
     alasan.push('Tidak ada skill dari kamus yang ditemukan.');
   }
 
   return {
-    skills,
-    riwayatKerja: riwayat,
+    skills: skill.skills,
+    riwayatKerja: kerja.riwayat,
+    temuanLain: kataKunci.temuanLain,
+    sorotan: rapikanSorotan([...skill.sorotan, ...kataKunci.sorotan, ...kerja.sorotan]),
     keyakinan: alasan.length === 0 ? 'tinggi' : 'rendah',
     alasanTinjau: alasan,
   };

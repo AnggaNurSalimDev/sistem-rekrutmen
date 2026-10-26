@@ -91,4 +91,47 @@ describe('2.7 Agregat skor akhir (fixture JSON statis)', () => {
     hitungSkorKandidat(LOWONGAN, KANDIDAT.sempurna);
     assert.deepEqual(KANDIDAT.sempurna, salinan);
   });
+
+  describe('Skor sementara (pilihan B)', () => {
+    const denganCv = (ubahCv) => ({ ...KANDIDAT.sempurna, cv: { ...KANDIDAT.sempurna.cv, ...ubahCv } });
+
+    test('CV dari parser belum diverifikasi → skor tetap dihitung, berlabel sementara', () => {
+      const hasil = hitungSkorKandidat(LOWONGAN, KANDIDAT.sempurna);
+      assert.equal(hasil.skorAkhir, 100);
+      assert.equal(hasil.sementara, true);
+      assert.equal(hasil.cvTerverifikasi, false);
+    });
+
+    test('CV sudah dikonfirmasi HR → tidak sementara', () => {
+      const hasil = hitungSkorKandidat(LOWONGAN, denganCv({ terverifikasi: true }));
+      assert.equal(hasil.sementara, false);
+      assert.equal(hasil.cvTerverifikasi, true);
+    });
+
+    test('status perlu_tinjau tetap menghasilkan skor + flag cv_perlu_tinjau', () => {
+      const hasil = hitungSkorKandidat(LOWONGAN, denganCv({ statusEkstraksi: 'perlu_tinjau' }));
+      assert.equal(hasil.skorAkhir, 100);
+      assert.equal(hasil.sementara, true);
+      assert.ok(hasil.flags.includes('cv_perlu_tinjau'));
+
+      const sudah = hitungSkorKandidat(LOWONGAN, denganCv({ statusEkstraksi: 'perlu_tinjau', terverifikasi: true }));
+      assert.ok(!sudah.flags.includes('cv_perlu_tinjau'));
+      assert.equal(sudah.sementara, false);
+    });
+
+    test('nilai "terverifikasi" selain true persis tidak dianggap terverifikasi', () => {
+      for (const nilai of ['true', 1, 'ya', null]) {
+        assert.equal(hitungSkorKandidat(LOWONGAN, denganCv({ terverifikasi: nilai })).sementara, true, String(nilai));
+      }
+    });
+
+    test('CV gagal atau belum diekstrak → skor akhir null, bukan skor sementara', () => {
+      for (const statusEkstraksi of ['gagal', 'menunggu']) {
+        const hasil = hitungSkorKandidat(LOWONGAN, denganCv({ statusEkstraksi }));
+        assert.equal(hasil.skorAkhir, null, statusEkstraksi);
+        assert.equal(hasil.komponen.cv, null);
+        assert.equal(hasil.sementara, false);
+      }
+    });
+  });
 });

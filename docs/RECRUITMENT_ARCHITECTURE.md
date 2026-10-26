@@ -10,11 +10,11 @@ Sistem menggunakan arsitektur terpisah antara antarmuka dan peladen:
 
 ## 2. Struktur Database (PostgreSQL)
 - **`users`:** id, email (unik), password_hash, role (`rekruter` | `kandidat`), dibuat_pada
-- **`lowongan`:** id, dibuat_oleh (FK users), posisi, budget_maksimal, skill_wajib (array, minimal 1), skill_opsional (array), kebutuhan_waktu (teks, contoh: "Shift pagi Senin–Sabtu"), status (`draf` | `buka` | `tutup`, default `draf`)
+- **`lowongan`:** id, dibuat_oleh (FK users), posisi, budget_maksimal, skill_wajib (array, minimal 1), skill_opsional (array), kebutuhan_waktu (teks, contoh: "Shift pagi Senin–Sabtu"), paket_kamus (array id paket untuk parser CV, contoh `{kru-outlet}`), status (`draf` | `buka` | `tutup`, default `draf`)
 - **`lowongan_tes`:** id, lowongan_id, jenis_tes (unik per lowongan), target_skor, batas_bawah, bobot, urutan
 - **`kandidat`** (satu baris = satu lamaran): id, user_id, lowongan_id, nama, email, nomor_kontak, ekspektasi_gaji, ketersediaan_waktu (`penuh` | `sebagian` | `tidak`), persetujuan_data (boolean + waktu), status_aplikasi, skor_akhir (nullable), rincian_skor (JSON), skor_dihitung_pada
   - Constraint: UNIQUE (user_id, lowongan_id)
-- **`cv_data`:** kandidat_id, kunci_berkas (kunci di storage, bukan URL — URL dibuat saat dibutuhkan karena kedaluwarsa), status_ekstraksi (`menunggu` | `berhasil` | `gagal` | `perlu_tinjau`), skills_mentah (JSON), skills_ternormalisasi (JSON), riwayat_kerja (JSON: `[{perusahaan, mulai, selesai | null}]`), total_bulan_kerja, jumlah_perusahaan, teks_cv (hasil ekstraksi PDF, untuk parse ulang dan tinjauan), sumber_ekstraksi (`regex` | `ai` | `manual`), alasan_tinjau (JSON: daftar alasan parser ragu), dikoreksi_oleh (FK users, nullable), dikoreksi_pada
+- **`cv_data`:** kandidat_id, kunci_berkas (kunci di storage, bukan URL — URL dibuat saat dibutuhkan karena kedaluwarsa), status_ekstraksi (`menunggu` | `berhasil` | `gagal` | `perlu_tinjau`), skills_mentah (JSON), skills_ternormalisasi (JSON), riwayat_kerja (JSON: `[{perusahaan, mulai, selesai | null}]`), total_bulan_kerja, jumlah_perusahaan, teks_cv (hasil ekstraksi PDF, untuk parse ulang dan tinjauan), sumber_ekstraksi (`regex` | `ai` | `manual`), alasan_tinjau (JSON: daftar alasan parser ragu), dikoreksi_oleh (FK users, nullable), dikoreksi_pada, sorotan (JSON: `[{awal, akhir, kategori, label}]`), temuan_lain (JSON), terverifikasi (boolean), diverifikasi_oleh, diverifikasi_pada
   - `total_bulan_kerja` dan `jumlah_perusahaan` dihitung oleh backend dari `riwayat_kerja`, bukan oleh parser.
 - **`soal`:** id, lowongan_tes_id, pertanyaan, opsi (JSON: `[{id, teks}]`), kunci_opsi_id, poin (default 1), urutan, aktif (boolean)
   - `terkunci` tidak disimpan sebagai kolom, tetapi dihitung dari ada tidaknya baris di `jawaban_kandidat`, sehingga tidak bisa tidak sinkron.
@@ -45,6 +45,7 @@ Aturan umum:
 - Setiap komponen menghasilkan angka 0–100 (di-clamp).
 - Pembulatan hanya dilakukan sekali di akhir (2 desimal).
 - Jika data sebuah komponen belum ada (contoh: ujian belum dikerjakan, ekstraksi CV gagal), `skor_akhir = null` dan status "belum lengkap". Data yang hilang tidak diperlakukan sebagai 0.
+- **Skor sementara.** Data CV dari parser (status `berhasil` maupun `perlu_tinjau`) langsung dipakai menghitung skor, supaya HR bisa mengurutkan kandidat sejak awal. Selama HR belum mengonfirmasi CV, hasilnya `sementara = true` dan dashboard **wajib** menampilkan label "sementara, belum diverifikasi" di setiap baris. CV `perlu_tinjau` juga diberi flag `cv_perlu_tinjau`. Setelah HR mengonfirmasi (dengan atau tanpa koreksi), `sementara = false`.
 
 1. **Skor Kesesuaian CV (30%):** (Jumlah Skill Wajib Ditemukan / Total Skill Wajib) * 100
    - Pencocokan dilakukan setelah normalisasi: huruf kecil, trim, hapus tanda baca, lalu dipetakan lewat kamus alias (contoh: "reactjs", "react.js" → "react").
@@ -77,7 +78,9 @@ Alur: PDF → teks → parser → data mentah → validasi skema → `cv_data`. 
 **Langkah 1 — PDF ke teks.** Baris teks dipertahankan karena parser regex bergantung padanya. PDF tanpa teks (hasil scan/foto) → `status_ekstraksi = gagal` dengan alasan "PDF tidak berisi teks". OCR belum didukung.
 
 **Langkah 2 — parser.** Semua mode mengembalikan bentuk yang sama:
-`{ skills: string[], riwayat_kerja: [{perusahaan, mulai: "YYYY-MM", selesai: "YYYY-MM" | null}], keyakinan: "tinggi" | "rendah", alasan_tinjau: string[] }`
+`{ skills: string[], riwayat_kerja: [{perusahaan, mulai: "YYYY-MM", selesai: "YYYY-MM" | null}], temuan_lain: [{label, kategori}], sorotan: [{awal, akhir, kategori, label}], keyakinan: "tinggi" | "rendah", alasan_tinjau: string[] }`
+
+Sorotan dan temuan lain selalu berasal dari regex, di mode apa pun, karena AI tidak mengembalikan posisi teks.
 
 | Mode | Cara kerja | Kelebihan | Kekurangan |
 |---|---|---|---|
@@ -85,17 +88,31 @@ Alur: PDF → teks → parser → data mentah → validasi skema → `cv_data`. 
 | `ai` | LLM mengembalikan JSON | Lebih tahan terhadap format beragam | Berbayar/butuh model lokal, data CV dikirim ke pihak ketiga (jika API), hasil bisa berbeda tiap kali |
 | `gabungan` | Regex dulu; LLM dipanggil hanya jika `keyakinan = rendah` | Biaya AI hanya untuk CV yang sulit | Paling rumit dikonfigurasi |
 
+**Paket kamus.** Regex hanya bisa menemukan apa yang ada di kamusnya, jadi kamus dikelompokkan per bidang pekerjaan. HR memilih satu atau beberapa paket saat membuat lowongan (`lowongan.paket_kamus`). Satu paket berisi:
+- `skill`: nama + alias (penulisan lain yang dianggap sama) + `persis` (singkatan yang hanya cocok jika ditulis persis, contoh "POS" agar tidak cocok dengan "kantor pos").
+- `penandaPerusahaan`: kata/merek yang menandai nama tempat kerja selain PT/CV (contoh "Indomaret", "kafe"), karena di banyak bidang pemberi kerja tidak memakai "PT".
+- `kataKunci`: hal penting selain skill yang disorot untuk HR tetapi tidak masuk skor, dengan kategori `sertifikat` (contoh SIM C, sertifikat penjamah makanan), `ketersediaan` (bersedia shift), atau `jabatan` (pernah menjadi kasir/barista).
+
+Paket bawaan: `teknologi-perkantoran` dan `kru-outlet`. Saat ini paket ditulis di kode (`backend/src/cv/paket/`) dan divalidasi saat server menyala; paket buatan klien (disimpan di database) belum didukung. Isi lengkap setiap paket bisa dilihat HR lewat API, supaya tidak ada aturan tersembunyi.
+
 **Parser regex:**
-- **Skill:** teks dipecah menjadi token, lalu 1–3 token berurutan dinormalisasi dengan fungsi yang sama dengan scoring engine (kamus alias), dan dicocokkan ke kamus = skill lowongan + kamus skill umum. Skill yang tidak ada di kamus tidak akan ditemukan. Skill sangat pendek (contoh "C", "R", "Go") rawan salah tangkap, jadi wajib cocok persis huruf besar-kecilnya dan dicatat di `alasan_tinjau`.
-- **Bagian CV:** judul seperti "Pengalaman Kerja"/"Work Experience" dan "Pendidikan"/"Education" dideteksi. Rentang tanggal di bagian pendidikan tidak dihitung sebagai pekerjaan.
+- **Skill:** teks dipecah menjadi kata per frasa, lalu 1–3 kata berurutan dinormalisasi dengan fungsi yang sama dengan scoring engine (kamus alias), dan dicocokkan ke kamus = skill lowongan + skill dari paket terpilih. Skill yang tidak ada di kamus tidak akan ditemukan. *Longest match*: kata yang sudah menjadi bagian skill lebih panjang tidak dipakai lagi ("Tailwind CSS" tidak menghasilkan "CSS"). Skill sangat pendek (contoh "C", "Go") rawan salah tangkap, jadi wajib cocok persis huruf besar-kecilnya dan dicatat di `alasan_tinjau`.
+- **Istilah HR menang:** jika skill lowongan ditulis "Cashier" dan paket memakai nama "Kasir" dengan alias "Cashier", hasil parser memakai "Cashier", supaya cocok dengan skill wajib di scoring engine.
+- **Bagian CV:** judul seperti "Pengalaman Kerja"/"Work Experience" dan "Pendidikan"/"Education" dideteksi. Rentang tanggal di bagian pendidikan, organisasi, dan bagian lain tidak dihitung sebagai pekerjaan.
 - **Tanggal:** nama bulan Indonesia dan Inggris (lengkap/singkatan), `MM/YYYY`, `YYYY-MM`, tahun saja, dan kata "sekarang"/"present" untuk pekerjaan yang masih berjalan.
-- **Nama perusahaan:** dicari di baris yang sama dengan tanggal atau 1–2 baris di atasnya. Prioritas pada teks yang memuat penanda badan usaha (PT, CV, Tbk, Inc, Ltd, dll.).
+- **Nama perusahaan:** dicari di baris yang sama dengan tanggal, lalu 1–2 baris di atas atau di bawahnya. Arah (atas/bawah) ditentukan dari pola mayoritas di CV itu; baris bullet tidak ikut menentukan arah. Prioritas pada teks yang memuat penanda badan usaha (PT, CV, Tbk, Inc, Ltd, dll.) atau penanda dari paket. Kata "di/at/@" hanya dipakai di baris tanggal itu sendiri.
+
+**Sorotan.** Setiap temuan disimpan beserta posisinya di teks CV (`awal`, `akhir`, `kategori`, `label`), dengan kategori `tanggal`, `perusahaan`, `skill`, `sertifikat`, `ketersediaan`, `jabatan`, dan `bagian`. Setiap kemunculan disorot, bukan hanya yang pertama. Sorotan dijamin tidak bertumpuk dan sudah urut; jika dua temuan bertumpuk, yang lebih penting untuk skor dipertahankan (tanggal > perusahaan > sertifikat/ketersediaan > skill > jabatan > bagian). Frontend cukup memotong teks di setiap `awal`/`akhir` lalu mewarnainya, tanpa logika regex sama sekali.
 
 **`keyakinan = rendah`** (→ `status_ekstraksi = perlu_tinjau`) jika salah satu terjadi: bagian pengalaman kerja tidak ditemukan, nama perusahaan hanya ditebak, bulan tidak disebut (hanya tahun), skill pendek ditemukan, atau tidak ada riwayat kerja sama sekali (bisa fresh graduate, bisa juga format tidak terbaca). Setiap alasan ditulis di `alasan_tinjau` agar HR tahu apa yang harus dicek.
 
 **Mode `ai`:** output divalidasi dengan skema yang sama. Jika tidak valid, dicoba sekali lagi; jika masih gagal, `status_ekstraksi = gagal`.
 
-**Langkah 3 — tinjauan HR.** CV berstatus `perlu_tinjau` atau `gagal` masuk antrean tinjauan. HR melihat PDF dan hasil ekstraksi berdampingan, memperbaikinya, lalu menyimpan. Hasilnya `sumber_ekstraksi = manual`, `status_ekstraksi = berhasil`, dan skor dihitung ulang. Hasil koreksi manual tidak ditimpa oleh parse ulang otomatis.
+**Langkah 3 — verifikasi HR.** HR membuka CV dengan sorotan, memeriksa data hasil parser, lalu:
+- **Konfirmasi tanpa perubahan** → `terverifikasi = true`, `sumber_ekstraksi` tetap (`regex`/`ai`).
+- **Koreksi lalu simpan** → `terverifikasi = true`, `sumber_ekstraksi = manual`, `status_ekstraksi = berhasil`.
+
+Keduanya mengisi `diverifikasi_oleh` dan `diverifikasi_pada`, lalu skor dihitung ulang tanpa label sementara. CV berstatus `perlu_tinjau` atau `gagal` tampil lebih dulu di antrean, tetapi CV `berhasil` pun tetap berstatus sementara sampai dikonfirmasi. Data yang sudah diverifikasi tidak ditimpa oleh parse ulang otomatis.
 
 Semua perhitungan (total bulan, jumlah perusahaan, pencocokan skill dengan lowongan) tetap dilakukan scoring engine di backend.
 

@@ -67,6 +67,7 @@ Body: `{ "email", "password" }`
   "id": "uuid", "posisi": "Frontend Developer", "budgetMaksimal": 8000000,
   "skillWajib": ["React"], "skillOpsional": ["TypeScript"],
   "kebutuhanWaktu": "Senin–Jumat 09.00–17.00",
+  "paketKamus": ["kru-outlet"],
   "status": "draf | buka | tutup", "jumlahPelamar": 0,
   "dibuatPada": "ISO-8601", "diubahPada": "ISO-8601",
   "tes": [Tes]
@@ -100,12 +101,14 @@ Body:
   "posisi": "Frontend Developer", "budgetMaksimal": 8000000,
   "skillWajib": ["React", "JavaScript"], "skillOpsional": [],
   "kebutuhanWaktu": "Senin–Jumat 09.00–17.00",
+  "paketKamus": ["kru-outlet"],
   "tes": [
     { "jenisTes": "logika", "targetSkor": 80, "batasBawah": 40, "bobot": 0.4 },
     { "jenisTes": "coding", "targetSkor": 90, "batasBawah": 50, "bobot": 0.6 }
   ]
 }
 ```
+- `paketKamus`: opsional (default `[]`), maksimal 10, tanpa duplikat, setiap id harus ada di `GET /paket-kamus`. Menentukan kamus yang dipakai parser CV regex untuk lowongan ini; skill wajib/opsional lowongan selalu ikut dicari.
 - `tes`: 1–10 item, `jenisTes` unik (tanpa membedakan huruf besar), skor 0–100, `bobot` > 0, jumlah bobot = 1 (toleransi 0,001).
 - 201 `{ "data": Lowongan }` · 400 pelanggaran invariant (pesan menyebut masalahnya)
 
@@ -113,7 +116,7 @@ Body:
 - 200 `{ "data": Lowongan }` · 404
 
 ### `PUT /lowongan/:id`
-Body sama seperti `POST`. `tes` **opsional**:
+Body sama seperti `POST`. `paketKamus` **opsional**: jika tidak dikirim, pilihan lama dipertahankan. `tes` **opsional**:
 - Tanpa `tes`: hanya data umum yang diubah (boleh di status apa pun).
 - Dengan `tes` (hanya saat `draf`): daftar lengkap tes yang diinginkan. Item dengan `id` = ubah, tanpa `id` = tambah, tes lama yang tidak disebut = hapus. Nama boleh bertukar dalam satu request.
 - 200 `{ "data": Lowongan }`
@@ -127,6 +130,29 @@ Body: `{ "status": "buka" }`
 
 ### `DELETE /lowongan/:id`
 - 204 (tes dan soal ikut terhapus) · 409 sudah ada pelamar
+
+---
+
+## Paket kamus — khusus `rekruter`
+
+Kamus bawaan untuk parser CV regex, dikelompokkan per bidang pekerjaan. Hanya dibaca; paket buatan klien belum didukung.
+
+### `GET /paket-kamus`
+- 200 `{ "data": [{ "id": "kru-outlet", "nama": "Kru Outlet (Retail & F&B)", "deskripsi": "...", "jumlahSkill": 17, "jumlahKataKunci": 7 }] }`
+
+### `GET /paket-kamus/:id`
+Isi lengkap, supaya HR tahu persis apa yang dicari regex.
+- 200:
+  ```json
+  { "data": {
+      "id": "kru-outlet", "nama": "...", "deskripsi": "...", "jumlahSkill": 17, "jumlahKataKunci": 7,
+      "skill": [{ "nama": "Kasir", "alias": ["Cashier", "Kassa"], "persis": [] }],
+      "penandaPerusahaan": ["toko", "Indomaret"],
+      "kataKunci": [{ "label": "SIM C", "kategori": "sertifikat" }]
+  } }
+  ```
+  Pola regex mentah sengaja tidak dikirim.
+- 404 id tidak dikenal
 
 ---
 

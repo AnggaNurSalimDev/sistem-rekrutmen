@@ -1,5 +1,5 @@
 import { pastikan } from './errors.js';
-import { BOBOT_KOMPONEN, FLAG } from './constants.js';
+import { BOBOT_KOMPONEN, FLAG, STATUS_CV_BERDATA } from './constants.js';
 import { bulatkan } from './util.js';
 import { validasiLowongan } from './validasi.js';
 import { hitungSkorCv } from './cv.js';
@@ -18,11 +18,16 @@ export { BOBOT_KOMPONEN, FLAG } from './constants.js';
  * ujian belum lengkap), skorAkhir = null dan status = 'belum_lengkap'.
  * Komponen yang datanya ada tetap dihitung supaya rekruter bisa melihatnya.
  *
+ * Skor sementara: data CV dari parser (status 'berhasil' atau 'perlu_tinjau')
+ * langsung dipakai, supaya HR bisa mengurutkan kandidat sejak awal. Selama
+ * HR belum mengonfirmasi CV (cv.terverifikasi !== true), hasilnya
+ * sementara = true dan dashboard wajib menampilkan label "belum diverifikasi".
+ *
  * Pembulatan hanya dilakukan sekali, di output.
  *
  * @param {object} lowongan {budgetMaksimal, skillWajib, tes:[{id, jenisTes, targetSkor, batasBawah, bobot}]}
  * @param {object} kandidat {tanggalLamaran, ekspektasiGaji, ketersediaanWaktu,
- *                           cv: {statusEkstraksi, skills, riwayatKerja} | null,
+ *                           cv: {statusEkstraksi, terverifikasi, skills, riwayatKerja} | null,
  *                           hasilUjian: [{lowonganTesId, skorPencapaian}]}
  */
 export function hitungSkorKandidat(lowongan, kandidat) {
@@ -41,7 +46,10 @@ export function hitungSkorKandidat(lowongan, kandidat) {
   const detail = {};
 
   const cv = kandidat.cv;
-  if (cv && cv.statusEkstraksi === 'berhasil') {
+  const cvBerdata = Boolean(cv) && STATUS_CV_BERDATA.includes(cv.statusEkstraksi);
+  const cvTerverifikasi = cvBerdata && cv.terverifikasi === true;
+  if (cvBerdata) {
+    if (cv.statusEkstraksi === 'perlu_tinjau' && !cvTerverifikasi) flags.add(FLAG.CV_PERLU_TINJAU);
     const hasilCv = hitungSkorCv(lowongan.skillWajib, cv.skills ?? []);
     komponen.cv = hasilCv.skor;
     detail.cv = { ditemukan: hasilCv.ditemukan, tidakDitemukan: hasilCv.tidakDitemukan };
@@ -73,6 +81,8 @@ export function hitungSkorKandidat(lowongan, kandidat) {
 
   return {
     status: lengkap ? 'lengkap' : 'belum_lengkap',
+    sementara: cvBerdata && !cvTerverifikasi,
+    cvTerverifikasi,
     skorAkhir: skorAkhir === null ? null : bulatkan(skorAkhir),
     komponen: Object.fromEntries(
       Object.entries(komponen).map(([nama, skor]) => [nama, skor === null ? null : bulatkan(skor)]),

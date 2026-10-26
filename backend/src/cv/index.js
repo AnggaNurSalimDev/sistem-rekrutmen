@@ -2,8 +2,9 @@ import { parseCvRegex } from './parserRegex.js';
 import { skemaHasilParser } from './skema.js';
 
 export { ekstrakTeksPdf } from './ekstrakTeks.js';
-export { parseCvRegex } from './parserRegex.js';
+export { parseCvRegex, rapikanSorotan } from './parserRegex.js';
 export { skemaHasilParser } from './skema.js';
+export { daftarPaket, paketAda, ambilPaket } from './paket/index.js';
 
 export const MODE_PARSER = Object.freeze(['regex', 'ai', 'gabungan']);
 
@@ -29,51 +30,55 @@ async function jalankanAi(parserAi, teks, opsi) {
 /**
  * Titik masuk parser CV. Semua mode mengembalikan bentuk yang sama:
  * { status: 'berhasil' | 'perlu_tinjau' | 'gagal', sumber: 'regex' | 'ai' | null,
- *   skills, riwayatKerja, alasanTinjau }
+ *   skills, riwayatKerja, temuanLain, sorotan, alasanTinjau }
  *
- * - regex:    selalu regex.
- * - ai:       selalu AI. Gagal dua kali → status 'gagal'.
+ * - regex:    data dari regex.
+ * - ai:       data dari AI. Gagal dua kali → status 'gagal'.
  * - gabungan: regex dulu; AI hanya dipanggil jika keyakinan regex rendah.
  *             Jika AI gagal, hasil regex tetap dipakai (status 'perlu_tinjau').
  *
- * @param {object} p
- * @param {string} p.teks
- * @param {'regex'|'ai'|'gabungan'} p.mode
- * @param {(teks, opsi) => Promise<object>} [p.parserAi] wajib untuk mode ai/gabungan
- * @param {string[]} [p.skillLowongan]
- * @param {string} p.tanggalAcuan YYYY-MM-DD
+ * Sorotan dan temuan lain SELALU dari regex, di mode apa pun: posisi teks
+ * dibutuhkan HR untuk memeriksa CV, dan AI tidak mengembalikan posisi.
+ *
+ * Status 'berhasil' bukan berarti terverifikasi. Semua hasil parser tetap
+ * berlabel "sementara" sampai HR mengonfirmasi.
  */
-export async function parseCv({ teks, mode, parserAi, skillLowongan = [], tanggalAcuan }) {
+export async function parseCv({ teks, mode, parserAi, skillLowongan = [], paket = [], tanggalAcuan }) {
   if (!MODE_PARSER.includes(mode)) throw new Error(`Mode parser tidak dikenal: ${mode}`);
   if (mode !== 'regex' && typeof parserAi !== 'function') {
     throw new Error(`Mode "${mode}" butuh parserAi, tapi parser AI belum dikonfigurasi`);
   }
   if (typeof teks !== 'string' || teks.trim() === '') {
-    return { status: 'gagal', sumber: null, skills: [], riwayatKerja: [], alasanTinjau: ['Teks CV kosong'] };
+    return {
+      status: 'gagal',
+      sumber: null,
+      skills: [],
+      riwayatKerja: [],
+      temuanLain: [],
+      sorotan: [],
+      alasanTinjau: ['Teks CV kosong'],
+    };
   }
 
-  const opsi = { skillLowongan, tanggalAcuan };
-
-  if (mode === 'ai') {
-    const ai = await jalankanAi(parserAi, teks, opsi);
-    if (!ai.ok) return { status: 'gagal', sumber: 'ai', skills: [], riwayatKerja: [], alasanTinjau: [ai.alasan] };
-    return { status: 'berhasil', sumber: 'ai', ...ai.data, alasanTinjau: [] };
-  }
-
-  const regex = parseCvRegex(teks, opsi);
+  const regex = parseCvRegex(teks, { skillLowongan, paket, tanggalAcuan });
+  const bantuBaca = { temuanLain: regex.temuanLain, sorotan: regex.sorotan };
   const hasilRegex = {
     status: regex.keyakinan === 'tinggi' ? 'berhasil' : 'perlu_tinjau',
     sumber: 'regex',
     skills: regex.skills,
     riwayatKerja: regex.riwayatKerja,
+    ...bantuBaca,
     alasanTinjau: regex.alasanTinjau,
   };
 
-  if (mode === 'regex' || regex.keyakinan === 'tinggi') return hasilRegex;
+  if (mode === 'regex') return hasilRegex;
+  if (mode === 'gabungan' && regex.keyakinan === 'tinggi') return hasilRegex;
 
-  const ai = await jalankanAi(parserAi, teks, opsi);
-  if (!ai.ok) {
-    return { ...hasilRegex, alasanTinjau: [...hasilRegex.alasanTinjau, `${ai.alasan}; memakai hasil regex.`] };
+  const ai = await jalankanAi(parserAi, teks, { skillLowongan, paket, tanggalAcuan });
+  if (ai.ok) return { status: 'berhasil', sumber: 'ai', ...ai.data, ...bantuBaca, alasanTinjau: [] };
+
+  if (mode === 'ai') {
+    return { status: 'gagal', sumber: 'ai', skills: [], riwayatKerja: [], ...bantuBaca, alasanTinjau: [ai.alasan] };
   }
-  return { status: 'berhasil', sumber: 'ai', ...ai.data, alasanTinjau: [] };
+  return { ...hasilRegex, alasanTinjau: [...hasilRegex.alasanTinjau, `${ai.alasan}; memakai hasil regex.`] };
 }
