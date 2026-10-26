@@ -1,20 +1,22 @@
 import { Link, NavLink, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
 
-export function Kepala() {
+export function Kepala({ lebar = false }) {
   const { user, keluar } = useAuth();
   return (
     <header className="kepala">
-      <div className="wadah">
+      <div className={lebar ? 'wadah lebar' : 'wadah'}>
         <Link to="/" className="merek" aria-label="Rekrut, ke daftar lowongan">
           Rekrut<span>.</span>
         </Link>
         <nav className="navigasi" aria-label="Utama">
-          <NavLink to="/" end>
-            Lowongan
-          </NavLink>
+          {user?.role !== 'rekruter' && (
+            <NavLink to="/" end>
+              Lowongan
+            </NavLink>
+          )}
           {user?.role === 'kandidat' && <NavLink to="/lamaran">Lamaran saya</NavLink>}
-          {user?.role === 'rekruter' && <NavLink to="/rekruter">Dashboard</NavLink>}
+          {user?.role === 'rekruter' && <NavLink to="/rekruter">Lowongan saya</NavLink>}
           {user ? (
             <button type="button" className="tombol-teks" onClick={keluar}>
               Keluar

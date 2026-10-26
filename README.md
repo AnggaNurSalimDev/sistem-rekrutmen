@@ -13,7 +13,8 @@ Dokumentasi: [arsitektur](docs/RECRUITMENT_ARCHITECTURE.md) · [API contract](do
 | 2 | Scoring engine + penilaian soal pilihan ganda | Selesai |
 | 3 | Parser CV: ekstraksi teks PDF, parser AI Claude, verifikasi kutipan, sorotan, kata kunci sorot per lowongan | Sebagian (belum diuji dengan API sungguhan) |
 | 4 | Halaman kandidat: lowongan, lamaran + upload CV, tes pilihan ganda dengan integrity signals | Selesai |
-| 5–6 | Dashboard rekruter, seeder data demo | Belum |
+| 5 | Dashboard rekruter: lowongan, bank soal, tabel kandidat + grafik + CSV, verifikasi CV dengan sorotan, keputusan | Selesai |
+| 6 | Seeder data demo | Belum |
 
 ## Menjalankan di komputer sendiri
 
@@ -76,7 +77,7 @@ Untuk mencoba alur pelamar, perlu satu lowongan berstatus buka beserta soalnya. 
 
 ```bash
 npm test                  # 98 unit test (scoring engine + parser CV, tanpa database dan tanpa API)
-npm run test:integration  # 71 test endpoint ke PostgreSQL sungguhan
+npm run test:integration  # 79 test endpoint ke PostgreSQL sungguhan
 npm run test:all          # keduanya
 npm run lint
 ```
@@ -89,7 +90,7 @@ Frontend:
 
 ```bash
 cd frontend
-npm test       # 17 test logika ujian (episode keluar fokus, kamera, pengacak opsi)
+npm test       # 42 test: logika ujian, sorotan kata kunci, tabel kandidat, ekspor CSV, form lowongan/soal/riwayat
 npm run lint
 npm run build
 ```
@@ -103,6 +104,16 @@ API_URL=http://localhost:3000 WEB_URL=http://localhost:5173 node e2e/alur-kandid
 ```
 
 Skrip ini membuat akun rekruter, lowongan, dan soal lewat API, lalu menjalankan: daftar → melamar dengan PDF → tes dengan satu kali pindah tab, muat ulang halaman, dan kamera palsu → kirim jawaban.
+
+Alur rekruter butuh backend dengan **parser AI palsu** (tidak memanggil API apa pun; hanya mengenali PDF contoh di `backend/test/fixtures/pdf/`), supaya sorotan dan verifikasi CV bisa diuji tanpa API key:
+
+```bash
+cd backend && PORT=3100 CORS_ORIGIN=http://localhost:4173 PUBLIC_BASE_URL=http://localhost:3100 node scripts/server-ai-palsu.js
+cd frontend && VITE_API_URL=http://localhost:3100 npm run build && npx vite preview --port 4173
+API_URL=http://localhost:3100 WEB_URL=http://localhost:4173 node e2e/alur-rekruter.mjs
+```
+
+Isinya: buat lowongan lewat form (termasuk validasi bobot) → isi bank soal → buka lowongan → tiga pelamar via API → tabel, filter, cari, unduh CSV → detail kandidat: sorotan AI, cari kata kunci, konfirmasi CV, isi CV manual untuk PDF scan, terima/tolak → tampilan HP tidak melebar.
 
 ## Struktur
 
@@ -125,6 +136,7 @@ backend/
       ai/                prompt, skema output, klien Claude Messages API
   scripts/
     buat-pdf-contoh.py   membuat ulang PDF contoh untuk test (butuh reportlab)
+    server-ai-palsu.js   backend dengan parser AI palsu, khusus uji e2e (menolak jalan di produksi)
   test/
     *.test.js            unit test scoring engine dan parser CV
     fixtures/cv/         contoh teks CV (fiktif)
@@ -135,9 +147,11 @@ frontend/
     api/klien.js         pemanggil API + format error
     auth/                login, token, peran
     halaman/             lowongan, detail + form lamaran, masuk/daftar, lamaran saya, tes
+      rekruter/          daftar & form lowongan, bank soal, tabel kandidat + grafik, detail kandidat, baca CV
+    rekruter/            logika murni dashboard: sorotan, filter/urut, statistik, CSV, form
     ujian/               pelacak keluar fokus, kamera, pengacak opsi berbenih
-  test/                  unit test logika ujian (Vitest)
-  e2e/                   uji ujung ke ujung alur pelamar (Playwright)
+  test/                  unit test (Vitest)
+  e2e/                   uji ujung ke ujung alur pelamar dan rekruter (Playwright)
 docs/
 ```
 
@@ -172,6 +186,13 @@ docs/
 - **Pelamar diberi tahu sebelum tes** apa saja yang dicatat. Skor dan catatan integritas tidak ditampilkan ke pelamar.
 - **Urutan opsi diacak per pelamar** dengan benih tetap, jadi tidak berubah saat halaman dimuat ulang. Draf jawaban juga tersimpan saat dimuat ulang.
 - **Soal dinilai sesuai yang dilihat pelamar**, walau rekruter mengubah bank soal di tengah tes.
+
+**Dashboard rekruter**
+- **Skor yang belum pasti selalu terlihat berbeda.** Selama CV belum dicek HR, skor diberi stempel kuning "Sementara" di tabel, detail, dan kolom CSV sendiri.
+- **Antrean verifikasi tanpa halaman terpisah.** Filter "Perlu dicek HR" di tabel, dan setelah konfirmasi ada tautan ke CV berikutnya yang belum dicek (skor tertinggi dulu).
+- **Dua lapis sorotan di CV**: temuan AI (garis bawah biru, hanya yang kutipannya terbukti) dan kata kunci rekruter (stabilo kuning, dicari di browser, kata utuh, tanpa beda huruf besar). Jumlah kemunculan tiap kata kunci ditampilkan, termasuk "tidak ada".
+- **Data integritas ditampilkan sebagai petunjuk**, dengan kalimat bahwa itu bukan bukti kecurangan.
+- **CSV dibuat di browser** dengan pemisah titik koma dan BOM (Excel Indonesia), dan sel yang diawali `=` `+` `-` `@` dinetralkan karena nama pelamar bisa berisi rumus.
 
 **Keamanan**
 - Peran user dibaca dari database setiap request, bukan dari token, sehingga token lama tidak bisa dipakai untuk menaikkan hak akses.

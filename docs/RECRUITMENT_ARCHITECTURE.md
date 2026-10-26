@@ -132,7 +132,7 @@ Semua perhitungan (total bulan, jumlah perusahaan, pencocokan skill dengan lowon
 - Data dummy seeder hanya berisi data fiktif.
 
 ## 7. Fitur Pendukung Portofolio
-- **Client-Side Export:** Ekspor CSV/XLSX dilakukan sepenuhnya di memori browser (React) menggunakan library eksternal, tanpa membebani backend.
+- **Client-Side Export:** Ekspor CSV dibuat sepenuhnya di browser tanpa library (pemisah titik koma + BOM agar terbuka rapi di Excel berbahasa Indonesia). Sel yang diawali `=` `+` `-` `@` diberi kutip tunggal supaya tidak dijalankan sebagai rumus. XLSX tidak dibuat karena CSV sudah mencukupi dan library XLSX menambah ukuran serta risiko dependensi.
 - **Dummy Data Seeder:** Skrip Node.js untuk menyuntikkan data fiktif, termasuk variasi skor teknis tinggi tetapi Integrity Signals buruk, fresh graduate tanpa riwayat kerja, CV dengan pengalaman tanpa tanggal, dan CV dengan ekstraksi gagal, untuk keperluan demonstrasi portofolio.
 
 ## 8. Bank Soal (Ujian Pilihan Ganda)

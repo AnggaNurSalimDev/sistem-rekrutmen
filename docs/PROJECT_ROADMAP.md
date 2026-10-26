@@ -67,15 +67,17 @@
 - [x] 4.5 Uji ujung ke ujung alur kandidat di browser sungguhan (`frontend/e2e/alur-kandidat.mjs`). → DoD: daftar → melamar dengan PDF → tes dengan satu kali pindah tab, muat ulang, dan kamera palsu → kirim; hitungan di database sesuai (2 episode, 1 kali dibuka ulang).
 
 # 6. Tahap 5 — Halaman Rekruter (Dashboard)
-- [ ] 5.1 Tabel analitik kandidat per lowongan dengan sorting & filter. → DoD: skor sementara selalu berlabel "belum diverifikasi" dan bisa difilter (misalnya hanya kandidat terverifikasi).
-- [ ] 5.2 Rincian skor per komponen dan flag (`tanpa_riwayat_kerja`, `riwayat_tidak_valid`, ekstraksi gagal).
-- [ ] 5.3 Visualisasi grafik metrik.
-- [ ] 5.4 Tampilan metrik Integrity Signals berdampingan dengan skor ujian (contoh: "Out of focus: 3x / 14 detik", "Akses Kamera: hardware_not_found").
-- [ ] 5.5 Client-side Export ke CSV/XLSX.
-- [ ] 5.6 Halaman kelola soal per tes (tambah, ubah, urutkan, nonaktifkan, pratinjau seperti yang dilihat kandidat). → DoD: soal terkunci ditampilkan sebagai tidak bisa diubah, dengan alasan yang jelas.
-- [ ] 5.7 Antrean verifikasi CV + endpoint konfirmasi/koreksi: teks CV dengan sorotan AI berwarna per kategori, kotak pencarian kata kunci (kata kunci lowongan + ketikan bebas, disorot di browser), alasan tinjau, kutipan bukti tiap temuan, dan hasil ekstraksi yang bisa diedit. Tombol "Konfirmasi" dan "Simpan koreksi"; isi manual untuk CV `menunggu`/`gagal`. → DoD: setelah disimpan, `terverifikasi = true`, label sementara hilang, skor dihitung ulang; koreksi menjadikan `sumber_ekstraksi = manual`; data terverifikasi tidak tertimpa parse ulang.
-- [ ] 5.8 Endpoint + tombol ubah status lamaran (`dilamar` → `ujian` → `selesai` → `diterima`/`ditolak`). → DoD: transisi yang tidak masuk akal ditolak; kandidat hanya bisa melihat status lamarannya sendiri.
-- [ ] 5.9 Halaman detail kandidat: rincian alasan skor (skill ditemukan/tidak, entri riwayat yang dibuang, skor per tes dan jawaban per soal, gaji vs budget), log integritas, tombol buka CV (signed URL).
+- [x] 5.1 Tabel analitik kandidat per lowongan dengan sorting & filter. → DoD: skor sementara selalu berlabel "belum diverifikasi" dan bisa difilter (misalnya hanya kandidat terverifikasi). *Selesai: stempel kuning "Sementara", filter Semua / Perlu dicek HR / Sudah dicek HR / Sudah diputuskan, cari nama, urut per kolom (nilai kosong selalu di bawah).*
+- [x] 5.2 Rincian skor per komponen dan flag (`tanpa_riwayat_kerja`, `riwayat_tidak_valid`, ekstraksi gagal). *Flag ditampilkan sebagai kalimat biasa, bukan kode.*
+- [x] 5.3 Visualisasi grafik metrik. *Selesai: sebaran skor akhir dan rata-rata per komponen (SVG tanpa library, tooltip, tampilan tabel). Grafik mengikuti filter.*
+- [x] 5.4 Tampilan metrik Integrity Signals berdampingan dengan skor ujian (contoh: "Out of focus: 3x / 14 detik", "Akses Kamera: hardware_not_found").
+- [x] 5.5 Client-side Export ke CSV. *XLSX sengaja tidak dibuat: CSV berpemisah titik koma + BOM sudah terbuka rapi di Excel Indonesia, tanpa menambah library. Sel yang diawali = + - @ dinetralkan (CSV injection).*
+- [x] 5.6 Halaman kelola soal per tes (tambah, ubah, urutkan, nonaktifkan, pratinjau seperti yang dilihat kandidat). → DoD: soal terkunci ditampilkan sebagai tidak bisa diubah, dengan alasan yang jelas.
+- [x] 5.7 Antrean verifikasi CV + endpoint konfirmasi/koreksi: teks CV dengan sorotan AI berwarna per kategori, kotak pencarian kata kunci (kata kunci lowongan + ketikan bebas, disorot di browser), alasan tinjau, kutipan bukti tiap temuan, dan hasil ekstraksi yang bisa diedit. Tombol "Konfirmasi" dan "Simpan koreksi"; isi manual untuk CV `menunggu`/`gagal`. → DoD: setelah disimpan, `terverifikasi = true`, label sementara hilang, skor dihitung ulang; koreksi menjadikan `sumber_ekstraksi = manual`; data terverifikasi tidak tertimpa parse ulang.
+- [x] 5.8 Endpoint + tombol ubah status lamaran (`dilamar` → `ujian` → `selesai` → `diterima`/`ditolak`). → DoD: transisi yang tidak masuk akal ditolak; kandidat hanya bisa melihat status lamarannya sendiri. *Dibuat lebih sederhana: rekruter hanya mengatur keputusan (terima / tolak / batalkan). Status progres dihitung dari tes yang dikirim, jadi tidak bisa diatur ke keadaan yang tidak masuk akal.*
+- [x] 5.9 Halaman detail kandidat: rincian alasan skor (skill ditemukan/tidak, entri riwayat yang dibuang, skor per tes dan jawaban per soal, gaji vs budget), log integritas, tombol buka CV (signed URL).
+
+- [x] 5.10 Uji ujung ke ujung alur rekruter (`frontend/e2e/alur-rekruter.mjs`) dengan parser AI palsu (`backend/scripts/server-ai-palsu.js`): buat lowongan → bank soal → buka → tabel, filter, CSV → sorotan + kata kunci → konfirmasi CV → isi CV manual → keputusan → tampilan HP.
 
 # 7. Tahap 6 — Dummy Data Seeder
 - [ ] 6.1 Pembuatan skrip injeksi database (termasuk akun rekruter dan kandidat demo).

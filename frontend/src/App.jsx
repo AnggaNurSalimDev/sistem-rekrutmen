@@ -1,4 +1,4 @@
-import { createBrowserRouter, Link, Outlet, RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, Link, Outlet, RouterProvider, useLocation } from 'react-router-dom';
 import { PenyediaAuth } from './auth/AuthContext.jsx';
 import { Kepala, Pesan, Wajib } from './komponen/umum.jsx';
 import Beranda from './halaman/Beranda.jsx';
@@ -6,31 +6,27 @@ import DetailLowongan from './halaman/DetailLowongan.jsx';
 import { Masuk, Daftar } from './halaman/Auth.jsx';
 import LamaranSaya from './halaman/LamaranSaya.jsx';
 import Ujian from './halaman/Ujian.jsx';
+import DaftarLowongan from './halaman/rekruter/DaftarLowongan.jsx';
+import FormLowongan from './halaman/rekruter/FormLowongan.jsx';
+import LowonganRekruter from './halaman/rekruter/LowonganRekruter.jsx';
+import KelolaSoal from './halaman/rekruter/KelolaSoal.jsx';
+import DetailKandidat from './halaman/rekruter/DetailKandidat.jsx';
 
 function Kerangka() {
+  // Halaman rekruter berisi tabel lebar; halaman pelamar tetap satu kolom sempit.
+  const lebar = useLocation().pathname.startsWith('/rekruter');
   return (
     <>
       <a href="#isi" className="sr-only">
         Lewati ke isi
       </a>
-      <Kepala />
+      <Kepala lebar={lebar} />
       <main id="isi">
-        <div className="wadah">
+        <div className={lebar ? 'wadah lebar' : 'wadah'}>
           <Outlet />
         </div>
       </main>
     </>
-  );
-}
-
-function DashboardRekruter() {
-  return (
-    <Pesan judul="Dashboard rekruter belum tersedia">
-      <p>
-        Halaman ini dibangun di tahap berikutnya. Untuk sementara, lowongan dan bank soal dikelola lewat API (lihat
-        docs/API_CONTRACT.md).
-      </p>
-    </Pesan>
   );
 }
 
@@ -54,7 +50,12 @@ const router = createBrowserRouter([
       { path: '/daftar', element: <Daftar /> },
       { path: '/lamaran', element: <Wajib peran="kandidat"><LamaranSaya /></Wajib> },
       { path: '/lamaran/:lamaranId/tes/:tesId', element: <Wajib peran="kandidat"><Ujian /></Wajib> },
-      { path: '/rekruter', element: <Wajib peran="rekruter"><DashboardRekruter /></Wajib> },
+      { path: '/rekruter', element: <Wajib peran="rekruter"><DaftarLowongan /></Wajib> },
+      { path: '/rekruter/lowongan/baru', element: <Wajib peran="rekruter"><FormLowongan /></Wajib> },
+      { path: '/rekruter/lowongan/:id', element: <Wajib peran="rekruter"><LowonganRekruter /></Wajib> },
+      { path: '/rekruter/lowongan/:id/ubah', element: <Wajib peran="rekruter"><FormLowongan /></Wajib> },
+      { path: '/rekruter/lowongan/:lowonganId/tes/:tesId/soal', element: <Wajib peran="rekruter"><KelolaSoal /></Wajib> },
+      { path: '/rekruter/kandidat/:id', element: <Wajib peran="rekruter"><DetailKandidat /></Wajib> },
       { path: '*', element: <TidakDitemukan /> },
     ],
   },
