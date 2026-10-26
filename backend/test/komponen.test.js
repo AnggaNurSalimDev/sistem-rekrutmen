@@ -96,6 +96,48 @@ describe('2.3 Riwayat kerja', () => {
     assert.equal(hasil.totalBulan, 12);
   });
 
+  test('entri tanpa tanggal (mulai = null) tidak dibuang dan tidak ditebak', () => {
+    const hasil = hitungRiwayatKerja(
+      [
+        { perusahaan: 'Kebab Turki Bandung', mulai: null, selesai: null },
+        { perusahaan: 'Bengkel Poles', mulai: null, selesai: null },
+        { perusahaan: 'Toko Hewan', mulai: null, selesai: '2023-01' },
+      ],
+      LAMARAN,
+    );
+    assert.equal(hasil.totalBulan, 0);
+    assert.equal(hasil.jumlahPerusahaan, 0);
+    assert.equal(hasil.jumlahTanpaTanggal, 3);
+    assert.deepEqual(hasil.entriDibuang, []);
+    assert.deepEqual(hasil.flags, ['lama_kerja_tidak_disebut']);
+  });
+
+  test('campuran: hanya entri bertanggal yang dihitung, sisanya diberi flag', () => {
+    const hasil = hitungRiwayatKerja(
+      [
+        { perusahaan: 'PT A', mulai: '2024-01', selesai: '2024-12' },
+        { perusahaan: 'Warung B', mulai: null, selesai: null },
+      ],
+      LAMARAN,
+    );
+    assert.equal(hasil.totalBulan, 12);
+    assert.equal(hasil.jumlahPerusahaan, 1);
+    assert.equal(hasil.jumlahTanpaTanggal, 1);
+    assert.deepEqual(hasil.flags, ['lama_kerja_tidak_disebut']);
+  });
+
+  test('perusahaan yang sama bertanggal di entri lain tidak dihitung "tanpa tanggal"', () => {
+    const hasil = hitungRiwayatKerja(
+      [
+        { perusahaan: 'PT A', mulai: '2024-01', selesai: '2024-12' },
+        { perusahaan: 'pt a', mulai: null, selesai: null },
+      ],
+      LAMARAN,
+    );
+    assert.equal(hasil.jumlahTanpaTanggal, 0);
+    assert.deepEqual(hasil.flags, []);
+  });
+
   test('tanggal lamaran tidak valid ditolak', () => {
     assert.throws(() => hitungRiwayatKerja([], '25-10-2026'), ScoringInputError);
   });
@@ -122,7 +164,21 @@ describe('2.4 Tenure', () => {
     assert.deepEqual(hasil.flags, ['tanpa_riwayat_kerja']);
   });
 
+  test('pilihan (a): punya pengalaman tapi tanpa tanggal → 50 + lama_kerja_tidak_disebut, BUKAN fresh graduate', () => {
+    const hasil = hitungSkorTenure({ totalBulan: 0, jumlahPerusahaan: 0, jumlahTanpaTanggal: 3 });
+    assert.equal(hasil.skor, 50);
+    assert.deepEqual(hasil.flags, ['lama_kerja_tidak_disebut']);
+    assert.ok(!hasil.flags.includes('tanpa_riwayat_kerja'));
+  });
+
+  test('campuran: skor dari entri bertanggal, tetap diberi flag', () => {
+    const hasil = hitungSkorTenure({ totalBulan: 24, jumlahPerusahaan: 1, jumlahTanpaTanggal: 2 });
+    assert.equal(hasil.skor, 100);
+    assert.deepEqual(hasil.flags, ['lama_kerja_tidak_disebut']);
+  });
+
   test('input negatif atau pecahan ditolak', () => {
+    assert.throws(() => hitungSkorTenure({ totalBulan: 0, jumlahPerusahaan: 0, jumlahTanpaTanggal: -1 }), ScoringInputError);
     assert.throws(() => hitungSkorTenure({ totalBulan: -1, jumlahPerusahaan: 1 }), ScoringInputError);
     assert.throws(() => hitungSkorTenure({ totalBulan: 5, jumlahPerusahaan: 0.5 }), ScoringInputError);
   });

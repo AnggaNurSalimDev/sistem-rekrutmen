@@ -1,6 +1,6 @@
 # Sistem Rekrutmen
 
-Sistem rekrutmen dengan scoring engine transparan, bank soal pilihan ganda yang bisa diisi sendiri oleh rekruter, parser CV yang bisa memakai regex, AI, atau keduanya, dan integrity signals untuk ujian online.
+Sistem rekrutmen dengan scoring engine transparan, bank soal pilihan ganda yang bisa diisi sendiri oleh rekruter, parser CV berbasis AI yang setiap temuannya wajib didukung kutipan dari CV, dan integrity signals untuk ujian online.
 
 Dokumentasi: [arsitektur](docs/RECRUITMENT_ARCHITECTURE.md) · [API contract](docs/API_CONTRACT.md) · [roadmap](docs/PROJECT_ROADMAP.md)
 
@@ -11,7 +11,7 @@ Dokumentasi: [arsitektur](docs/RECRUITMENT_ARCHITECTURE.md) · [API contract](do
 | 0 | API contract | Selesai (folder frontend menyusul di Tahap 4) |
 | 1 | Server Express, skema database, storage privat, login & peran, CRUD lowongan, bank soal | Selesai |
 | 2 | Scoring engine + penilaian soal pilihan ganda | Selesai |
-| 3 | Parser CV: ekstraksi teks PDF, parser regex dengan paket kamus (Kru Outlet) dan sorotan untuk HR, orkestrator mode regex/ai/gabungan | Sebagian (parser AI dan uji dengan CV asli belum) |
+| 3 | Parser CV: ekstraksi teks PDF, parser AI Claude, verifikasi kutipan, sorotan, kata kunci sorot per lowongan | Sebagian (belum diuji dengan API sungguhan) |
 | 4–6 | Halaman kandidat & rekruter, seeder | Belum |
 
 ## Menjalankan di komputer sendiri
@@ -49,20 +49,26 @@ npm run migrate
 npm run dev
 ```
 
-Buka http://localhost:3000/health. Jika muncul `{"status":"ok","database":"ok"}`, backend siap.
+Buka http://localhost:3000/health. Jika muncul `"status":"ok"` dan `"database":"ok"`, backend siap.
+
+### 4. (Opsional) Aktifkan parser CV AI
+
+Isi `ANTHROPIC_API_KEY` di `.env` dengan API key Claude milik Anda, lalu jalankan ulang server. Tanpa key, aplikasi tetap berjalan: CV diterima dan masuk antrean isi manual, dan `/health` menampilkan `"parserAi": false`. Biaya API ditanggung pemilik key; API ditagih terpisah dari langganan chat Claude ([cara membuat API key](https://platform.claude.com/docs/en/manage-claude/authentication)).
 
 Server menolak menyala jika konfigurasi kurang atau database tidak bisa dihubungi, dan pesannya menyebut apa yang harus diperbaiki.
 
 ## Test
 
 ```bash
-npm test                  # 111 unit test (scoring engine + parser CV, tanpa database)
-npm run test:integration  # 48 test endpoint ke PostgreSQL sungguhan
+npm test                  # 98 unit test (scoring engine + parser CV, tanpa database dan tanpa API)
+npm run test:integration  # 47 test endpoint ke PostgreSQL sungguhan
 npm run test:all          # keduanya
 npm run lint
 ```
 
 Test integrasi **mengosongkan** database di `TEST_DATABASE_URL` setiap kali berjalan. Sebagai pengaman, test menolak berjalan jika nama databasenya tidak mengandung kata `test`. Jika `.env.test` belum ada, test integrasi dilewati dengan pesan, bukan gagal.
+
+Test parser AI **tidak memanggil Claude sungguhan** (memakai `fetch` palsu), jadi gratis dan tidak butuh key. Test ini membuktikan alur, verifikasi kutipan, dan penanganan error, tetapi bukan seberapa akurat Claude membaca CV.
 
 ## Struktur
 
@@ -78,16 +84,16 @@ backend/
       pool.js            koneksi + helper transaksi
     auth/                hash password (scrypt), JWT, requireAuth, requireRole
     http/                format error, validasi body (zod)
-    routes/              health, auth, lowongan, soal, files, paket-kamus
+    routes/              health, auth, lowongan, soal, files
     storage/             storage disk lokal + signed URL
     scoring/             fungsi murni: skor kandidat, validasi, penilaian soal
-    cv/                  PDF → teks, parser regex, orkestrator mode parser
-      paket/             paket kamus per bidang (teknologi-perkantoran, kru-outlet)
+    cv/                  PDF → teks, alur parser, verifikasi kutipan
+      ai/                prompt, skema output, klien Claude Messages API
   scripts/
     buat-pdf-contoh.py   membuat ulang PDF contoh untuk test (butuh reportlab)
   test/
     *.test.js            unit test scoring engine dan parser CV
-    fixtures/cv/         contoh teks CV beragam format (fiktif)
+    fixtures/cv/         contoh teks CV (fiktif)
     fixtures/pdf/        contoh PDF: berteks dan hasil scan (fiktif)
     integration/         test endpoint dengan supertest + PostgreSQL
 docs/
@@ -99,8 +105,9 @@ docs/
 - **Skor sementara sampai HR memverifikasi CV.** Hasil parser langsung dipakai untuk skor supaya HR bisa mengurutkan kandidat sejak awal, tetapi selalu berlabel "belum diverifikasi" sampai HR menekan konfirmasi.
 - **Data belum lengkap → `null`, bukan 0.** Kandidat yang belum ujian atau CV-nya gagal diekstrak tidak terlihat buruk; dashboard menampilkan "belum lengkap".
 - **Fresh graduate → Tenure 50 (netral) + flag `tanpa_riwayat_kerja`.** Guard ditaruh sebelum pembagian karena `0 / 0` di JavaScript menghasilkan `NaN`, yang tanpa guard jatuh ke cabang skor 100.
+- **Pengalaman tanpa tanggal → Tenure 50 + flag `lama_kerja_tidak_disebut`**, bukan dianggap fresh graduate. Banyak CV asli menyebut tempat kerja tanpa tahun; sistem tidak menebaknya.
 - **Pembulatan hanya sekali di akhir**, supaya selisih pembulatan tidak menumpuk.
-- **LLM hanya mengekstrak**; semua hitungan (bulan kerja, pencocokan skill) dilakukan di kode yang bisa diuji.
+- **AI hanya mengekstrak**; semua hitungan (bulan kerja, pencocokan skill) dilakukan di kode yang bisa diuji.
 
 **Bank soal**
 - **Soal adalah data, bukan kode.** Rekruter membuat soal pilihan ganda sendiri lewat API; scoring engine tidak berubah.
@@ -109,12 +116,13 @@ docs/
 - **Konfigurasi tes hanya bisa diubah saat lowongan berstatus draf.** Lowongan draf pasti belum punya pelamar.
 
 **Parser CV**
-- **Tiga mode, satu bentuk output.** `regex` (gratis, lokal, bisa dijelaskan), `ai`, atau `gabungan` (AI hanya untuk CV yang membuat regex ragu). Scoring engine tidak tahu dan tidak perlu tahu sumbernya.
-- **Parser tidak pernah menolak lamaran.** CV yang meragukan diberi status `perlu_tinjau` beserta alasannya (misalnya "2 rentang kerja hanya menyebut tahun"), lalu dikoreksi HR.
-- **Paket kamus per bidang.** Regex hanya menemukan apa yang ada di kamusnya, jadi HR memilih paket sesuai lowongan. Paket Kru Outlet juga mengenali merek seperti Indomaret atau Kopi Kenangan sebagai tempat kerja, dan menyorot hal non-skill seperti SIM C atau "bersedia kerja shift".
-- **Sorotan untuk HR.** Setiap temuan disimpan beserta posisinya di teks CV, tanpa tumpang tindih, sehingga frontend cukup mewarnainya.
-- **Bagian CV dikenali.** Tanggal di bagian Pendidikan dan Pengalaman Organisasi tidak dihitung sebagai pengalaman kerja.
-- **Longest match untuk skill.** "Tailwind CSS" tidak ikut menghasilkan "CSS". Akibatnya, kandidat yang hanya menulis "Tailwind CSS" tidak dianggap punya skill "CSS"; jika HR menganggapnya setara, tambahkan alias.
+- **AI mengekstrak, backend memeriksa.** Setiap temuan AI wajib membawa kutipan persis dari CV. Kutipan yang tidak ada di CV, nama perusahaan yang tidak tertulis, dan tanggal yang tahunnya tidak terlihat di kutipan dibuang atau dikosongkan. Ini penangkal utama AI yang mengarang.
+- **Tanggal tidak pernah ditebak.** CV tanpa tanggal kerja menghasilkan entri "tanpa tanggal", bukan tanggal karangan.
+- **Teks CV adalah data, bukan perintah.** Prompt melarang AI mengikuti instruksi di dalam CV, tag `<cv>` tidak bisa ditutup dari dalam CV, dan kalimat seperti "abaikan semua instruksi" ditandai untuk HR.
+- **Parser tidak pernah menolak lamaran.** AI mati, gagal, atau ragu → CV masuk antrean tinjauan/isi manual.
+- **Fitur AI opsional.** Tanpa API key (misalnya demo publik), semua fitur lain tetap berjalan. Halaman web tidak pernah meminta API key dari pengunjung.
+- **Kata kunci sorot dari rekruter.** Rekruter menulis kata atau kalimat yang dicari di setiap CV lowongan; penyorotannya di frontend dan tidak memengaruhi skor.
+- *Riwayat:* parser regex sempat dibuat, lalu diganti setelah diuji dengan CV asli yang ditulis sebagai kalimat dan tanpa tanggal. Kodenya ada di riwayat git.
 
 **Keamanan**
 - Peran user dibaca dari database setiap request, bukan dari token, sehingga token lama tidak bisa dipakai untuk menaikkan hak akses.
@@ -127,6 +135,7 @@ docs/
 
 - **Belum ada pembatasan percobaan login (rate limit).** Perlu ditambahkan sebelum dipakai publik.
 - **Pendaftaran rekruter terbuka** (`ALLOW_REKRUTER_SIGNUP=true`) supaya calon klien bisa mencoba demo. Di produksi sebaiknya `false`, dan akun rekruter dibuat lewat undangan.
+- Jika AI aktif, teks CV dikirim ke Anthropic. Formulir lamaran (Tahap 4) wajib meminta persetujuan untuk ini.
 - Storage baru mendukung disk lokal. Untuk deploy di server tanpa disk permanen, perlu driver S3/Supabase.
 - Menambah soal ke tes yang sedang dibuka mengubah total poin untuk kandidat **berikutnya**. Skor kandidat yang sudah mengirim ujian tidak berubah karena disimpan saat dikirim.
 
@@ -134,6 +143,6 @@ docs/
 
 - Bobot 30/20/30/10/10 dan ambang tenure 6/12 bulan adalah tebakan awal, belum divalidasi terhadap hasil rekrutmen sungguhan.
 - Durasi kerja dihitung inklusif (Jan–Jun = 6 bulan). Dua pekerjaan yang waktunya tumpang tindih dijumlahkan apa adanya, tidak digabung.
-- Kamus alias skill masih kecil dan perlu ditambah sesuai CV yang masuk.
-- **Akurasi parser regex belum diukur dengan CV asli.** Semua contoh di `test/fixtures` dibuat sendiri, jadi lulusnya test hanya membuktikan parser bekerja untuk format yang sudah diantisipasi. Akurasi sebenarnya baru diketahui di task 3.6 dengan minimal 5 CV asli yang dianonimkan.
+- Kamus alias skill di scoring engine masih kecil dan perlu ditambah sesuai CV yang masuk.
+- **Akurasi Claude membaca CV belum diukur.** Belum pernah dipanggil dengan API sungguhan; semua test memakai jawaban AI palsu. Akurasi baru diketahui di task 3.7.
 - CV hasil scan/foto tidak bisa dibaca (belum ada OCR) dan selalu masuk antrean tinjauan manual.

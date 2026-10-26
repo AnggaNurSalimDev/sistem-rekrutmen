@@ -2,7 +2,7 @@
 
 # 0. Aturan Penggunaan Roadmap
 1. Jangan menganggap task selesai hanya karena kode sudah dibuat; harus memenuhi Definition of Done (DoD).
-2. Parser CV (regex maupun AI) tidak digunakan untuk komputasi matematika, hanya ekstraksi.
+2. Parser CV (AI) tidak digunakan untuk komputasi matematika atau penilaian, hanya ekstraksi. Setiap temuan AI wajib didukung kutipan yang benar-benar ada di CV.
 3. Integrity Signals tidak memotong skor teknis.
 4. Export data dieksekusi di client-side.
 5. Error deteksi kamera (hardware not found) tidak memblokir ujian.
@@ -41,22 +41,23 @@
   - Aktual tepat di batas bawah, tepat di target, di antara keduanya, di atas target.
   - Tenure tepat 6 bulan dan tepat 12 bulan.
   - Fresh graduate (0 perusahaan) → Tenure 50, bukan NaN atau 100.
+  - Pengalaman tanpa tanggal → Tenure 50 + `lama_kerja_tidak_disebut`, bukan dianggap fresh graduate.
   - Ekspektasi gaji sama dengan budget, 15% di atas budget, 16% di atas budget.
   - Skill dengan penulisan berbeda ("ReactJS" vs "react").
   - Ujian belum dikerjakan → skor_akhir null.
 - [x] 2.9 Fungsi validasi soal dan penilaian jawaban pilihan ganda → skor_pencapaian. → DoD: test mencakup soal tidak dijawab = salah, poin berbeda per soal, soal nonaktif tidak dihitung, jawaban untuk soal asing atau opsi asing ditolak.
 - [x] 2.10 Skor sementara: data CV yang belum diverifikasi HR tetap dihitung dengan label `sementara`. → DoD: hanya `terverifikasi === true` yang menghilangkan label; CV `gagal`/`menunggu` tetap menghasilkan null.
 
-# 4. Tahap 3 — Parser CV
+# 4. Tahap 3 — Parser CV (AI)
+*Parser regex (3.2, 3.3, 3.7, 3.8 versi lama) sempat selesai, lalu diganti AI setelah diuji dengan CV asli: CV yang ditulis sebagai kalimat dan tanpa tanggal kerja membuat regex salah tangkap. Kodenya ada di riwayat git.*
+
 - [x] 3.1 Ekstraksi teks dari PDF dengan baris terjaga. → DoD: PDF tanpa teks (scan) menghasilkan `gagal` dengan alasan jelas, bukan crash.
-- [x] 3.2 Parser regex: skill, rentang tanggal (ID/EN), nama perusahaan, deteksi bagian CV, keyakinan + alasan tinjau. → DoD: test mencakup CV berbahasa Indonesia dan Inggris, CV tanpa judul bagian, tanggal tahun saja, pekerjaan "sampai sekarang", bagian pendidikan yang tidak boleh dihitung, skill pendek yang ambigu.
-- [x] 3.3 Orkestrator mode `regex` | `ai` | `gabungan` dengan skema output yang sama untuk semua mode. → DoD: mode `gabungan` hanya memanggil AI saat keyakinan regex rendah (diuji dengan parser AI palsu).
-- [x] 3.7 Paket kamus per bidang (skill + alias + singkatan persis, penanda perusahaan, kata kunci non-skill) dan paket pertama **Kru Outlet**; lowongan memilih paket lewat `paketKamus`; `GET /paket-kamus` menampilkan isi paket. → DoD: paket bawaan divalidasi saat server menyala; merek tanpa "PT" dikenali hanya jika paket dipilih; istilah skill dari HR menang atas nama di paket.
-- [x] 3.8 Sorotan posisi temuan untuk HR (tanggal, perusahaan, skill, sertifikat, ketersediaan, jabatan, judul bagian). → DoD: posisi tepat menunjuk teks, tidak bertumpuk, urut; benar walau baris diawali spasi.
-- [ ] 3.9 Paket buatan klien (disimpan di database, divalidasi dengan `periksaPaket` yang sama).
-- [ ] 3.4 Parser AI (Claude/OpenAI/Ollama) dengan validasi skema. → DoD: output tidak valid dicoba ulang satu kali, lalu ditandai `gagal` tanpa menolak lamaran.
-- [ ] 3.5 Simpan hasil ke `cv_data` dan hitung total_bulan_kerja & jumlah_perusahaan memakai fungsi dari Tahap 2 (dikerjakan bersama endpoint lamaran di 4.1).
-- [ ] 3.6 Uji akurasi dengan minimal 5 CV **asli** (dianonimkan, termasuk CV berbahasa Indonesia), untuk setiap mode yang tersedia. → DoD: hasil dibandingkan manual dan dicatat per kolom (skill, tanggal, perusahaan). CV contoh buatan sendiri tidak dihitung, karena parser bisa saja hanya cocok dengan contoh yang dibuat untuknya.
+- [x] 3.2 Parser AI Claude (Messages API, tool wajib dipanggil) dengan validasi skema dan coba ulang. → DoD: output tidak valid / error sementara dicoba ulang satu kali; error permanen (key salah) tidak diulang; gagal → `gagal` tanpa menolak lamaran; tidak mengirim `temperature`; API key tidak muncul di pesan error.
+- [x] 3.3 Verifikasi kutipan: temuan tanpa kutipan yang ada di CV dibuang; nama perusahaan harus tertulis; tanggal hanya dipercaya jika tahunnya terlihat di kutipan; kalimat yang tampak sebagai perintah untuk AI ditandai. → DoD: test mencakup kutipan karangan, nama perusahaan karangan, tanggal karangan, kutipan terpotong baris, dan upaya menutup tag `<cv>` dari dalam CV.
+- [x] 3.4 Mode tanpa AI: tanpa `ANTHROPIC_API_KEY`, CV berstatus `menunggu` (isi manual) dan `/health` menampilkan `fitur.parserAi = false`. → DoD: server tetap menyala dan lamaran tetap bisa diproses tanpa key.
+- [x] 3.5 Sorotan dari kutipan AI yang terbukti + kata kunci sorot per lowongan (`kataKunciSorot`, disimpan backend, disorot di frontend).
+- [ ] 3.6 Simpan hasil ke `cv_data` dan hitung skor (dikerjakan bersama endpoint lamaran di 4.1).
+- [ ] 3.7 Uji akurasi dengan CV **asli** memakai API sungguhan (butuh API key; biayanya kecil). → DoD: dua CV pemilik proyek lulus, yaitu tidak ada tanggal karangan dan ketiga tempat kerja ditemukan; hasil per kolom dicatat. CV buatan sendiri tidak dihitung.
 
 # 5. Tahap 4 — Halaman Kandidat
 - [ ] 4.1 Daftar lowongan terbuka dan formulir lamaran (data diri, ekspektasi gaji, pertanyaan ketersediaan waktu, persetujuan data, upload CV).
@@ -71,7 +72,7 @@
 - [ ] 5.4 Tampilan metrik Integrity Signals berdampingan dengan skor ujian (contoh: "Out of focus: 3x / 14 detik", "Akses Kamera: hardware_not_found").
 - [ ] 5.5 Client-side Export ke CSV/XLSX.
 - [ ] 5.6 Halaman kelola soal per tes (tambah, ubah, urutkan, nonaktifkan, pratinjau seperti yang dilihat kandidat). → DoD: soal terkunci ditampilkan sebagai tidak bisa diubah, dengan alasan yang jelas.
-- [ ] 5.7 Antrean verifikasi CV + endpoint konfirmasi/koreksi: teks CV dengan sorotan berwarna per kategori, alasan tinjau, temuan lain, dan hasil ekstraksi yang bisa diedit. Tombol "Konfirmasi" dan "Simpan koreksi". → DoD: setelah disimpan, `terverifikasi = true`, label sementara hilang, skor dihitung ulang; koreksi menjadikan `sumber_ekstraksi = manual`; data terverifikasi tidak tertimpa parse ulang.
+- [ ] 5.7 Antrean verifikasi CV + endpoint konfirmasi/koreksi: teks CV dengan sorotan AI berwarna per kategori, kotak pencarian kata kunci (kata kunci lowongan + ketikan bebas, disorot di browser), alasan tinjau, kutipan bukti tiap temuan, dan hasil ekstraksi yang bisa diedit. Tombol "Konfirmasi" dan "Simpan koreksi"; isi manual untuk CV `menunggu`/`gagal`. → DoD: setelah disimpan, `terverifikasi = true`, label sementara hilang, skor dihitung ulang; koreksi menjadikan `sumber_ekstraksi = manual`; data terverifikasi tidak tertimpa parse ulang.
 - [ ] 5.8 Endpoint + tombol ubah status lamaran (`dilamar` → `ujian` → `selesai` → `diterima`/`ditolak`). → DoD: transisi yang tidak masuk akal ditolak; kandidat hanya bisa melihat status lamarannya sendiri.
 - [ ] 5.9 Halaman detail kandidat: rincian alasan skor (skill ditemukan/tidak, entri riwayat yang dibuang, skor per tes dan jawaban per soal, gaji vs budget), log integritas, tombol buka CV (signed URL).
 
@@ -82,4 +83,6 @@
   - Kandidat B: skor sedang, clean.
   - Kandidat C: fresh graduate tanpa riwayat kerja.
   - Kandidat D: ekstraksi CV gagal (menunggu tinjauan manual).
+  - Kandidat E: pengalaman kerja tanpa tanggal (flag `lama_kerja_tidak_disebut`).
+  - Hasil ekstraksi di data demo diberi label "contoh hasil" jika tidak benar-benar dihasilkan AI.
 - [ ] 6.3 Set soal contoh pilihan ganda untuk setiap tes demo, beserta jawaban kandidat A–D yang konsisten dengan skor mereka.

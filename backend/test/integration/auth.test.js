@@ -13,7 +13,7 @@ describe('1.1 Health & 1.4 Autentikasi', { skip: ALASAN_LEWATI }, () => {
   test('GET /health → 200', async () => {
     const res = await request(api.app).get('/health');
     assert.equal(res.status, 200);
-    assert.deepEqual(res.body, { status: 'ok', database: 'ok' });
+    assert.deepEqual(res.body, { status: 'ok', database: 'ok', fitur: { parserAi: false } });
   });
 
   test('registrasi berhasil dan password tidak ikut dikembalikan', async () => {

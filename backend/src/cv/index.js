@@ -1,84 +1,79 @@
-import { parseCvRegex } from './parserRegex.js';
-import { skemaHasilParser } from './skema.js';
+import { skemaHasilAi } from './ai/skema.js';
+import { verifikasiHasilAi } from './verifikasi.js';
 
 export { ekstrakTeksPdf } from './ekstrakTeks.js';
-export { parseCvRegex, rapikanSorotan } from './parserRegex.js';
-export { skemaHasilParser } from './skema.js';
-export { daftarPaket, paketAda, ambilPaket } from './paket/index.js';
+export { buatParserClaude, ErrorParserAi } from './ai/claude.js';
+export { verifikasiHasilAi, rapikanSorotan } from './verifikasi.js';
 
-export const MODE_PARSER = Object.freeze(['regex', 'ai', 'gabungan']);
+export const PESAN_AI_NONAKTIF = 'Parser AI tidak aktif. Isi data CV secara manual.';
+
+const hasilKosong = (status, alasan) => ({
+  status,
+  sumber: null,
+  skills: [],
+  riwayatKerja: [],
+  rincian: { skills: [], riwayatKerja: [], temuanLain: [] },
+  sorotan: [],
+  alasanTinjau: [alasan],
+});
 
 /**
- * Memanggil parser AI dan memvalidasi output dengan skema yang sama.
- * Output tidak valid dicoba ulang satu kali.
- * @returns {Promise<{ok: true, data} | {ok: false, alasan}>}
+ * Memanggil parser AI dan memvalidasi output dengan skema.
+ * Dicoba ulang satu kali, kecuali error yang pasti terulang (key salah dll).
  */
 async function jalankanAi(parserAi, teks, opsi) {
   let alasan = 'Parser AI tidak mengembalikan data yang valid';
   for (let percobaan = 1; percobaan <= 2; percobaan++) {
     try {
-      const hasil = skemaHasilParser.safeParse(await parserAi(teks, opsi));
+      const hasil = skemaHasilAi.safeParse(await parserAi(teks, opsi));
       if (hasil.success) return { ok: true, data: hasil.data };
-      alasan = `Output parser AI tidak sesuai skema: ${hasil.error.issues[0]?.message ?? 'tidak diketahui'}`;
+      const masalah = hasil.error.issues[0];
+      alasan = `Output parser AI tidak sesuai skema (${masalah?.path.join('.') || '-'}: ${masalah?.message})`;
     } catch (err) {
-      alasan = `Parser AI gagal: ${err.message}`;
+      alasan = err?.message ? `Parser AI gagal: ${err.message}` : 'Parser AI gagal';
+      if (err?.bisaDiulang === false) break;
     }
   }
   return { ok: false, alasan };
 }
 
 /**
- * Titik masuk parser CV. Semua mode mengembalikan bentuk yang sama:
- * { status: 'berhasil' | 'perlu_tinjau' | 'gagal', sumber: 'regex' | 'ai' | null,
- *   skills, riwayatKerja, temuanLain, sorotan, alasanTinjau }
+ * Teks CV → data untuk cv_data dan scoring engine.
  *
- * - regex:    data dari regex.
- * - ai:       data dari AI. Gagal dua kali → status 'gagal'.
- * - gabungan: regex dulu; AI hanya dipanggil jika keyakinan regex rendah.
- *             Jika AI gagal, hasil regex tetap dipakai (status 'perlu_tinjau').
+ * Status:
+ * - 'menunggu'     parser AI tidak aktif (tidak ada API key, misalnya di demo).
+ *                  HR mengisi data manual; skor CV/Tenure null sampai diisi.
+ * - 'gagal'        AI gagal dua kali / teks kosong. Lamaran tetap diterima.
+ * - 'berhasil'     semua temuan terbukti lewat kutipan.
+ * - 'perlu_tinjau' ada temuan dibuang, tanggal dikosongkan, atau CV mencurigakan.
  *
- * Sorotan dan temuan lain SELALU dari regex, di mode apa pun: posisi teks
- * dibutuhkan HR untuk memeriksa CV, dan AI tidak mengembalikan posisi.
+ * 'berhasil' BUKAN berarti terverifikasi: skor tetap berlabel sementara
+ * sampai HR mengonfirmasi.
  *
- * Status 'berhasil' bukan berarti terverifikasi. Semua hasil parser tetap
- * berlabel "sementara" sampai HR mengonfirmasi.
+ * @param {object} p
+ * @param {string} p.teks hasil ekstrakTeksPdf
+ * @param {Function|null} p.parserAi dari buatParserClaude, atau null jika tidak aktif
+ * @param {string[]} [p.skillLowongan] skill wajib + opsional lowongan
+ * @returns {Promise<{status, sumber, skills: string[], riwayatKerja, rincian, sorotan, alasanTinjau}>}
+ *   riwayatKerja berbentuk input scoring engine: [{perusahaan, mulai, selesai}]
  */
-export async function parseCv({ teks, mode, parserAi, skillLowongan = [], paket = [], tanggalAcuan }) {
-  if (!MODE_PARSER.includes(mode)) throw new Error(`Mode parser tidak dikenal: ${mode}`);
-  if (mode !== 'regex' && typeof parserAi !== 'function') {
-    throw new Error(`Mode "${mode}" butuh parserAi, tapi parser AI belum dikonfigurasi`);
-  }
-  if (typeof teks !== 'string' || teks.trim() === '') {
-    return {
-      status: 'gagal',
-      sumber: null,
-      skills: [],
-      riwayatKerja: [],
-      temuanLain: [],
-      sorotan: [],
-      alasanTinjau: ['Teks CV kosong'],
-    };
-  }
+export async function prosesCv({ teks, parserAi, skillLowongan = [] }) {
+  if (parserAi !== null && typeof parserAi !== 'function') throw new Error('parserAi harus fungsi atau null');
+  if (!Array.isArray(skillLowongan)) throw new Error('skillLowongan harus berupa array');
+  if (typeof teks !== 'string' || teks.trim() === '') return hasilKosong('gagal', 'Teks CV kosong');
+  if (parserAi === null) return hasilKosong('menunggu', PESAN_AI_NONAKTIF);
 
-  const regex = parseCvRegex(teks, { skillLowongan, paket, tanggalAcuan });
-  const bantuBaca = { temuanLain: regex.temuanLain, sorotan: regex.sorotan };
-  const hasilRegex = {
-    status: regex.keyakinan === 'tinggi' ? 'berhasil' : 'perlu_tinjau',
-    sumber: 'regex',
-    skills: regex.skills,
-    riwayatKerja: regex.riwayatKerja,
-    ...bantuBaca,
-    alasanTinjau: regex.alasanTinjau,
+  const ai = await jalankanAi(parserAi, teks, { skillLowongan });
+  if (!ai.ok) return { ...hasilKosong('gagal', ai.alasan), sumber: 'ai' };
+
+  const v = verifikasiHasilAi(teks, ai.data);
+  return {
+    status: v.alasanTinjau.length === 0 ? 'berhasil' : 'perlu_tinjau',
+    sumber: 'ai',
+    skills: [...new Set(v.skills.map((s) => s.nama))],
+    riwayatKerja: v.riwayatKerja.map(({ perusahaan, mulai, selesai }) => ({ perusahaan, mulai, selesai })),
+    rincian: { skills: v.skills, riwayatKerja: v.riwayatKerja, temuanLain: v.temuanLain },
+    sorotan: v.sorotan,
+    alasanTinjau: v.alasanTinjau,
   };
-
-  if (mode === 'regex') return hasilRegex;
-  if (mode === 'gabungan' && regex.keyakinan === 'tinggi') return hasilRegex;
-
-  const ai = await jalankanAi(parserAi, teks, { skillLowongan, paket, tanggalAcuan });
-  if (ai.ok) return { status: 'berhasil', sumber: 'ai', ...ai.data, ...bantuBaca, alasanTinjau: [] };
-
-  if (mode === 'ai') {
-    return { status: 'gagal', sumber: 'ai', skills: [], riwayatKerja: [], ...bantuBaca, alasanTinjau: [ai.alasan] };
-  }
-  return { ...hasilRegex, alasanTinjau: [...hasilRegex.alasanTinjau, `${ai.alasan}; memakai hasil regex.`] };
 }

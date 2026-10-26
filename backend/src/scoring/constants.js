@@ -27,6 +27,7 @@ export const FLAG = Object.freeze({
   RIWAYAT_TIDAK_VALID: 'riwayat_tidak_valid',
   EKSTRAKSI_GAGAL: 'ekstraksi_gagal',
   CV_PERLU_TINJAU: 'cv_perlu_tinjau',
+  LAMA_KERJA_TIDAK_DISEBUT: 'lama_kerja_tidak_disebut',
 });
 
 /** Status ekstraksi yang datanya boleh dipakai untuk skor (sementara jika belum diverifikasi). */

@@ -5,7 +5,6 @@ import { parse, idParam, z } from '../http/validate.js';
 import { requireRole } from '../auth/middleware.js';
 import { validasiLowongan } from '../scoring/validasi.js';
 import { validasiSoal } from '../scoring/soal.js';
-import { paketAda } from '../cv/paket/index.js';
 
 const teks = (maks) => z.string().trim().min(1).max(maks);
 
@@ -25,32 +24,31 @@ const bidangLowongan = {
   kebutuhanWaktu: teks(300),
 };
 
-// id paket kamus untuk parser CV regex (lihat GET /paket-kamus).
-const paketKamus = z
-  .array(z.string().trim().min(1).max(60))
-  .max(10)
-  .refine((daftar) => new Set(daftar).size === daftar.length, 'paket kamus tidak boleh dobel');
+// Kata/kalimat yang disorot frontend di setiap CV lowongan ini.
+// Duplikat (tanpa membedakan huruf besar) ditolak supaya daftar tetap rapi.
+const kataKunciSorot = z
+  .array(z.string().trim().min(1).max(100))
+  .max(50)
+  .refine(
+    (daftar) => new Set(daftar.map((k) => k.toLowerCase())).size === daftar.length,
+    'kata kunci sorot tidak boleh dobel',
+  );
 
 const skemaBuat = z.strictObject({
   ...bidangLowongan,
-  paketKamus: paketKamus.default([]),
+  kataKunciSorot: kataKunciSorot.default([]),
   tes: z.array(skemaTes).min(1).max(10),
 });
-// paketKamus opsional saat ubah: jika tidak dikirim, pilihan lama dipertahankan.
+// kataKunciSorot opsional saat ubah: jika tidak dikirim, daftar lama dipertahankan.
 const skemaUbah = z.strictObject({
   ...bidangLowongan,
-  paketKamus: paketKamus.optional(),
+  kataKunciSorot: kataKunciSorot.optional(),
   tes: z.array(skemaTes).min(1).max(10).optional(),
 });
 const skemaStatus = z.strictObject({ status: z.enum(['draf', 'buka', 'tutup']) });
 
 /** Cek invariant domain (jumlah bobot = 1, nama tes unik, dst). */
 function validasiDomain(data) {
-  const tidakDikenal = (data.paketKamus ?? []).filter((id) => !paketAda(id));
-  if (tidakDikenal.length > 0) {
-    throw validasiGagal(`Paket kamus tidak dikenal: ${tidakDikenal.join(', ')}`, { field: 'paketKamus' });
-  }
-
   const nama = data.tes.map((t) => t.jenisTes.toLowerCase());
   const ganda = nama.find((n, i) => nama.indexOf(n) !== i);
   if (ganda) throw validasiGagal(`Nama tes "${ganda}" dipakai lebih dari sekali`, { field: 'tes' });
@@ -83,7 +81,7 @@ function tampilkanLowongan(l, tes) {
     skillWajib: l.skill_wajib,
     skillOpsional: l.skill_opsional,
     kebutuhanWaktu: l.kebutuhan_waktu,
-    paketKamus: l.paket_kamus,
+    kataKunciSorot: l.kata_kunci_sorot,
     status: l.status,
     jumlahPelamar: l.jumlah_pelamar ?? 0,
     dibuatPada: l.dibuat_pada,
@@ -214,7 +212,7 @@ export function ruteLowongan({ pool, requireAuth }) {
     const hasil = await denganTransaksi(pool, async (db) => {
       const { rows } = await db.query(
         `INSERT INTO lowongan
-           (dibuat_oleh, posisi, budget_maksimal, skill_wajib, skill_opsional, kebutuhan_waktu, paket_kamus)
+           (dibuat_oleh, posisi, budget_maksimal, skill_wajib, skill_opsional, kebutuhan_waktu, kata_kunci_sorot)
          VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
         [
           req.user.id,
@@ -223,7 +221,7 @@ export function ruteLowongan({ pool, requireAuth }) {
           data.skillWajib,
           data.skillOpsional,
           data.kebutuhanWaktu,
-          data.paketKamus,
+          data.kataKunciSorot,
         ],
       );
       await simpanTes(db, rows[0].id, data.tes);
@@ -258,7 +256,7 @@ export function ruteLowongan({ pool, requireAuth }) {
 
       await db.query(
         `UPDATE lowongan SET posisi = $1, budget_maksimal = $2, skill_wajib = $3, skill_opsional = $4,
-           kebutuhan_waktu = $5, paket_kamus = COALESCE($6, paket_kamus), diubah_pada = now()
+           kebutuhan_waktu = $5, kata_kunci_sorot = COALESCE($6, kata_kunci_sorot), diubah_pada = now()
          WHERE id = $7`,
         [
           data.posisi,
@@ -266,7 +264,7 @@ export function ruteLowongan({ pool, requireAuth }) {
           data.skillWajib,
           data.skillOpsional,
           data.kebutuhanWaktu,
-          data.paketKamus ?? null,
+          data.kataKunciSorot ?? null,
           lowongan.id,
         ],
       );

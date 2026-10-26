@@ -60,6 +60,7 @@ export function hitungSkorKandidat(lowongan, kandidat) {
     detail.tenure = {
       totalBulan: riwayat.totalBulan,
       jumlahPerusahaan: riwayat.jumlahPerusahaan,
+      jumlahTanpaTanggal: riwayat.jumlahTanpaTanggal,
       rataRataBulan: hasilTenure.rataRataBulan,
       entriDibuang: riwayat.entriDibuang,
     };

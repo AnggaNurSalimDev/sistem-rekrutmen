@@ -18,6 +18,11 @@ const skema = z.object({
   PUBLIC_BASE_URL: z.url().default('http://localhost:3000'),
   CORS_ORIGIN: z.string().min(1).default('http://localhost:5173'),
   ALLOW_REKRUTER_SIGNUP: boolDariEnv,
+  // Parser CV AI. Kosong = fitur AI mati (contoh: demo publik); CV masuk antrean isi manual.
+  ANTHROPIC_API_KEY: z.string().trim().default(''),
+  ANTHROPIC_MODEL: z.string().trim().min(1).default('claude-haiku-5-5'),
+  ANTHROPIC_VERSION: z.string().trim().min(1).default('2026-10-21'),
+  AI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120_000).default(30_000),
 });
 
 /**
@@ -31,6 +36,9 @@ export function muatConfig(env = process.env) {
     throw new Error(`Konfigurasi tidak valid:\n${daftar}\nLihat backend/.env.example`);
   }
   const c = hasil.data;
+  if (c.ANTHROPIC_API_KEY && c.ANTHROPIC_API_KEY.length < 20) {
+    throw new Error('ANTHROPIC_API_KEY terlalu pendek; kosongkan untuk mematikan fitur AI');
+  }
   if (c.JWT_SECRET === c.STORAGE_SIGNING_SECRET) {
     throw new Error('JWT_SECRET dan STORAGE_SIGNING_SECRET harus berbeda');
   }

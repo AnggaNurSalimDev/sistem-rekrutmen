@@ -3,6 +3,7 @@ import { muatConfig } from './config.js';
 import { buatPool } from './db/pool.js';
 import { buatStorage } from './storage/index.js';
 import { buatApp } from './app.js';
+import { buatParserClaude } from './cv/index.js';
 
 let config;
 try {
@@ -21,7 +22,17 @@ try {
   process.exit(1);
 }
 
-const app = buatApp({ pool, config, storage: buatStorage(config) });
+const parserAi = config.ANTHROPIC_API_KEY
+  ? buatParserClaude({
+      apiKey: config.ANTHROPIC_API_KEY,
+      model: config.ANTHROPIC_MODEL,
+      versiApi: config.ANTHROPIC_VERSION,
+      timeoutMs: config.AI_TIMEOUT_MS,
+    })
+  : null;
+console.log(parserAi ? `Parser CV AI aktif (${config.ANTHROPIC_MODEL})` : 'Parser CV AI tidak aktif (ANTHROPIC_API_KEY kosong)');
+
+const app = buatApp({ pool, config, storage: buatStorage(config), parserAi });
 const server = app.listen(config.PORT, () => {
   console.log(`Backend berjalan di http://localhost:${config.PORT}`);
 });
