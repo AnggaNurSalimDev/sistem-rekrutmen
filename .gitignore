@@ -1,6 +1,8 @@
 node_modules/
 .env
 .env.test
-storage/
+# Berkas CV yang diunggah (lokasi default STORAGE_DIR). Hanya folder ini,
+# bukan backend/src/storage yang berisi kode.
+/backend/storage/
 .DS_Store
 coverage/
