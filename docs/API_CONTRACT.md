@@ -278,6 +278,64 @@ Body:
 
 ---
 
-## Belum ada (tahap berikutnya)
+## Kandidat — khusus `rekruter`, hanya pelamar di lowongan milik sendiri
 
-- Data kandidat, skor, CV dengan sorotan, verifikasi CV, dan integrity signals untuk dashboard rekruter (Tahap 5)
+### `GET /lowongan/:id/kandidat`
+- 200 `{ "data": [BarisKandidat] }`, terbaru dulu. 404 lowongan bukan milik Anda.
+
+```json
+{
+  "id": "uuid", "nama": "...", "email": "...", "nomorKontak": "...",
+  "ekspektasiGaji": 4200000, "ketersediaanWaktu": "penuh",
+  "statusAplikasi": "dilamar | ujian | selesai | ditolak | diterima", "dikirimPada": "ISO-8601",
+  "skorAkhir": 72.5,
+  "skor": { "status": "lengkap | belum_lengkap | galat", "sementara": true,
+            "komponen": { "cv": 100, "tenure": 50, "tes": 60, "anggaran": 100, "waktu": 100 },
+            "flags": ["lama_kerja_tidak_disebut"] },
+  "cv": { "statusEkstraksi": "menunggu | berhasil | perlu_tinjau | gagal", "terverifikasi": false, "sumber": "ai | manual | null" },
+  "integritas": { "statusKamera": "granted", "jumlahKeluarFokus": 2, "totalDetikKeluarFokus": 14, "dibukaUlang": 1 },
+  "ujian": [{ "tesId": "uuid", "skor": 50, "durasiDetik": 412 }]
+}
+```
+`skorAkhir` terisi walau `skor.sementara = true`; dashboard **wajib** memberi label "belum diverifikasi". `integritas` = `null` sebelum ada tes yang dikirim.
+
+### `GET /kandidat/:id`
+Semua `BarisKandidat`, ditambah:
+- `lowongan`: `{ id, posisi, kataKunciSorot, skillWajib, skillOpsional, budgetMaksimal, kebutuhanWaktu }`
+- `rincianSkor`: hasil lengkap scoring engine (komponen, flags, detail per komponen)
+- `cv`: `{ statusEkstraksi, sumber, terverifikasi, diverifikasiPada, alasanTinjau, teks, sorotan: [{awal, akhir, kategori, label}], skills, riwayatKerja, rincianAi, urlPdf }`. `urlPdf` berlaku 5 menit.
+- `tes`: `[{ id, jenisTes, targetSkor, batasBawah, bobot, hasil: { skor, durasiDetik, dikirimPada } | null, jawaban: [{ soalId, pertanyaan, opsi, kunciOpsiId, opsiDipilih, benar }] }]`
+- `integritasLengkap`: `{ statusKamera, jumlahKeluarFokus, totalDetikKeluarFokus, log }` atau `null`
+
+### `POST /kandidat/:id/cv/konfirmasi`
+HR menyatakan hasil parser benar. Label sementara hilang, skor dihitung ulang.
+- 200 `{ "data": RingkasSkor }` (idempoten) · 409 CV `menunggu`/`gagal` (belum ada data, pakai koreksi)
+
+### `PUT /kandidat/:id/cv`
+Koreksi atau isi manual data CV. Data dari HR menggantikan hasil parser (`sumber = manual`, `terverifikasi = true`).
+```json
+{
+  "skills": ["Pelayanan Pelanggan", "Kasir"],
+  "riwayatKerja": [
+    { "perusahaan": "Toko Maju", "mulai": "2021-01", "selesai": "2022-12" },
+    { "perusahaan": "Kafe Senja", "mulai": "2023-02", "selesai": null },
+    { "perusahaan": "Warung Sari", "mulai": null, "selesai": null }
+  ]
+}
+```
+- `selesai: null` dengan `mulai` terisi = masih bekerja. Keduanya `null` = lama kerja tidak diketahui (Tenure 50 + flag).
+- 200 `{ "data": RingkasSkor }` · 400 selesai sebelum mulai / selesai tanpa mulai / mulai di masa depan / format bukan `YYYY-MM`
+
+### `PATCH /kandidat/:id/status`
+Body: `{ "keputusan": "diterima" | "ditolak" | null }`. `null` membatalkan keputusan; status kembali ke progres tes (`dilamar`/`ujian`/`selesai`). Keputusan tidak tertimpa walau pelamar masih mengirim tes.
+- 200 `{ "data": { "statusAplikasi": "ditolak" } }` · 400
+
+Mengubah budget atau skill lowongan (`PUT /lowongan/:id`) menghitung ulang skor semua pelamarnya.
+
+`RingkasSkor` = `{ status, sementara, komponen, flags }`
+
+---
+
+## Belum ada
+
+- Paket kamus/kata kunci buatan klien di database, undangan akun rekruter, pembatasan percobaan login

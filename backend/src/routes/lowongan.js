@@ -5,6 +5,7 @@ import { parse, idParam, z } from '../http/validate.js';
 import { requireRole } from '../auth/middleware.js';
 import { validasiLowongan } from '../scoring/validasi.js';
 import { validasiSoal } from '../scoring/soal.js';
+import { hitungUlangSkor } from '../layanan/skor.js';
 
 const teks = (maks) => z.string().trim().min(1).max(maks);
 
@@ -269,6 +270,9 @@ export function ruteLowongan({ pool, requireAuth }) {
         ],
       );
       if (data.tes) await simpanTes(db, lowongan.id, data.tes);
+      // Budget dan skill memengaruhi skor: semua pelamar dihitung ulang.
+      const { rows: pelamar } = await db.query('SELECT id FROM kandidat WHERE lowongan_id = $1', [lowongan.id]);
+      for (const k of pelamar) await hitungUlangSkor(db, k.id);
       return detail(db, await ambilLowonganMilik(db, lowongan.id, req.user.id));
     });
     res.json({ data: hasil });

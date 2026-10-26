@@ -9,6 +9,7 @@ import { ruteSoalPerTes, ruteSoal } from './routes/soal.js';
 import { ruteFiles } from './routes/files.js';
 import { ruteLowonganTerbuka } from './routes/lowonganTerbuka.js';
 import { ruteLamaran } from './routes/lamaran.js';
+import { ruteKandidat, ruteKandidatPerLowongan } from './routes/kandidat.js';
 
 /**
  * Membuat aplikasi Express tanpa menyalakan server, supaya bisa diuji
@@ -28,12 +29,14 @@ export function buatApp({ pool, config, storage, parserAi = null, log = console 
 
   app.use('/health', ruteHealth(deps));
   app.use('/auth', ruteAuth(deps));
+  app.use('/lowongan/:lowonganId/kandidat', ruteKandidatPerLowongan(deps));
   app.use('/lowongan', ruteLowongan(deps));
   app.use('/tes/:tesId/soal', ruteSoalPerTes(deps));
   app.use('/soal', ruteSoal(deps));
   app.use('/files', ruteFiles(deps));
   app.use('/lowongan-terbuka', ruteLowonganTerbuka(deps));
   app.use('/lamaran', ruteLamaran(deps));
+  app.use('/kandidat', ruteKandidat(deps));
 
   app.use(notFoundHandler);
   app.use(buatErrorHandler({ log }));
