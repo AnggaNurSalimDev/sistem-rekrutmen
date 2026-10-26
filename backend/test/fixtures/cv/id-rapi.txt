@@ -1,0 +1,21 @@
+BUDI SANTOSO
+Bandung | budi@contoh.id | 0812 3456 7890
+
+RINGKASAN
+Web developer dengan pengalaman 4 tahun membangun aplikasi kasir dan e-commerce.
+
+PENGALAMAN KERJA
+PT Kreasi Teknologi Indonesia
+Fullstack Developer | Agustus 2023 - Sekarang
+- Membangun dashboard penjualan dengan React dan Node.js
+- Bertanggung jawab di bagian integrasi pembayaran
+CV Sinar Abadi
+Web Developer | Februari 2021 - Juli 2023
+- Membuat toko online dengan Laravel dan MySQL
+
+PENDIDIKAN
+Universitas Komputer Indonesia
+S1 Teknik Informatika | 2016 - 2020
+
+KEAHLIAN
+JavaScript, ReactJS, Node.js, Laravel, MySQL, Git, Docker

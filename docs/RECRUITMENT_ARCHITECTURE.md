@@ -6,7 +6,7 @@ Sistem menggunakan arsitektur terpisah antara antarmuka dan peladen:
 - **Backend:** Node.js + Express. Autentikasi JWT; setiap endpoint memeriksa peran (middleware `requireRole`).
 - **Database:** PostgreSQL (untuk data terstruktur)
 - **Object Storage:** untuk berkas PDF CV. Saat ini driver disk lokal (`STORAGE_DRIVER=local`); driver AWS S3 / Supabase Storage cukup mengikuti antarmuka yang sama. Berkas privat; akses hanya lewat signed URL (HMAC) berumur pendek.
-- **AI Parser:** LLM API (Claude/OpenAI) atau Model Lokal (Ollama - Phi-3/Qwen). Hanya mengekstraksi data mentah, tidak menghitung apa pun.
+- **Parser CV:** tiga mode yang bisa dipilih klien: `regex` (tanpa biaya, berjalan lokal), `ai` (LLM API Claude/OpenAI atau model lokal Ollama), dan `gabungan`. Semua mode hanya mengekstraksi data mentah, tidak menghitung apa pun.
 
 ## 2. Struktur Database (PostgreSQL)
 - **`users`:** id, email (unik), password_hash, role (`rekruter` | `kandidat`), dibuat_pada
@@ -14,8 +14,8 @@ Sistem menggunakan arsitektur terpisah antara antarmuka dan peladen:
 - **`lowongan_tes`:** id, lowongan_id, jenis_tes (unik per lowongan), target_skor, batas_bawah, bobot, urutan
 - **`kandidat`** (satu baris = satu lamaran): id, user_id, lowongan_id, nama, email, nomor_kontak, ekspektasi_gaji, ketersediaan_waktu (`penuh` | `sebagian` | `tidak`), persetujuan_data (boolean + waktu), status_aplikasi, skor_akhir (nullable), rincian_skor (JSON), skor_dihitung_pada
   - Constraint: UNIQUE (user_id, lowongan_id)
-- **`cv_data`:** kandidat_id, kunci_berkas (kunci di storage, bukan URL — URL dibuat saat dibutuhkan karena kedaluwarsa), status_ekstraksi (`menunggu` | `berhasil` | `gagal` | `perlu_tinjau`), skills_mentah (JSON), skills_ternormalisasi (JSON), riwayat_kerja (JSON: `[{perusahaan, mulai, selesai | null}]`), total_bulan_kerja, jumlah_perusahaan
-  - `total_bulan_kerja` dan `jumlah_perusahaan` dihitung oleh backend dari `riwayat_kerja`, bukan oleh LLM.
+- **`cv_data`:** kandidat_id, kunci_berkas (kunci di storage, bukan URL — URL dibuat saat dibutuhkan karena kedaluwarsa), status_ekstraksi (`menunggu` | `berhasil` | `gagal` | `perlu_tinjau`), skills_mentah (JSON), skills_ternormalisasi (JSON), riwayat_kerja (JSON: `[{perusahaan, mulai, selesai | null}]`), total_bulan_kerja, jumlah_perusahaan, teks_cv (hasil ekstraksi PDF, untuk parse ulang dan tinjauan), sumber_ekstraksi (`regex` | `ai` | `manual`), alasan_tinjau (JSON: daftar alasan parser ragu), dikoreksi_oleh (FK users, nullable), dikoreksi_pada
+  - `total_bulan_kerja` dan `jumlah_perusahaan` dihitung oleh backend dari `riwayat_kerja`, bukan oleh parser.
 - **`soal`:** id, lowongan_tes_id, pertanyaan, opsi (JSON: `[{id, teks}]`), kunci_opsi_id, poin (default 1), urutan, aktif (boolean)
   - `terkunci` tidak disimpan sebagai kolom, tetapi dihitung dari ada tidaknya baris di `jawaban_kandidat`, sehingga tidak bisa tidak sinkron.
 - **`jawaban_kandidat`:** kandidat_id, soal_id, opsi_dipilih (nullable), benar (boolean, dihitung server), dijawab_pada
@@ -71,10 +71,33 @@ Aturan umum:
 
 Skor dihitung ulang setiap kali data lowongan atau data kandidat berubah. Waktu perhitungan disimpan di `skor_dihitung_pada`.
 
-## 4. AI Parser (Ekstraksi CV)
-- LLM diminta mengembalikan JSON dengan skema tetap: `{ skills: string[], riwayat_kerja: [{perusahaan, mulai: "YYYY-MM", selesai: "YYYY-MM" | null}] }`.
-- Output divalidasi dengan skema (contoh: zod). Jika tidak valid, sistem mencoba sekali lagi. Jika masih gagal, `status_ekstraksi = gagal` dan lamaran masuk antrean tinjauan manual. Lamaran tidak ditolak otomatis.
-- Semua perhitungan (total bulan, jumlah perusahaan, pencocokan skill) dilakukan di backend.
+## 4. Parser CV (Ekstraksi)
+Alur: PDF → teks → parser → data mentah → validasi skema → `cv_data`. Lamaran tidak pernah ditolak otomatis karena CV gagal dibaca.
+
+**Langkah 1 — PDF ke teks.** Baris teks dipertahankan karena parser regex bergantung padanya. PDF tanpa teks (hasil scan/foto) → `status_ekstraksi = gagal` dengan alasan "PDF tidak berisi teks". OCR belum didukung.
+
+**Langkah 2 — parser.** Semua mode mengembalikan bentuk yang sama:
+`{ skills: string[], riwayat_kerja: [{perusahaan, mulai: "YYYY-MM", selesai: "YYYY-MM" | null}], keyakinan: "tinggi" | "rendah", alasan_tinjau: string[] }`
+
+| Mode | Cara kerja | Kelebihan | Kekurangan |
+|---|---|---|---|
+| `regex` | Pencocokan pola dan kamus | Gratis, cepat, hasil bisa dijelaskan, data tidak keluar server | Lemah untuk nama perusahaan dan format CV yang tidak umum |
+| `ai` | LLM mengembalikan JSON | Lebih tahan terhadap format beragam | Berbayar/butuh model lokal, data CV dikirim ke pihak ketiga (jika API), hasil bisa berbeda tiap kali |
+| `gabungan` | Regex dulu; LLM dipanggil hanya jika `keyakinan = rendah` | Biaya AI hanya untuk CV yang sulit | Paling rumit dikonfigurasi |
+
+**Parser regex:**
+- **Skill:** teks dipecah menjadi token, lalu 1–3 token berurutan dinormalisasi dengan fungsi yang sama dengan scoring engine (kamus alias), dan dicocokkan ke kamus = skill lowongan + kamus skill umum. Skill yang tidak ada di kamus tidak akan ditemukan. Skill sangat pendek (contoh "C", "R", "Go") rawan salah tangkap, jadi wajib cocok persis huruf besar-kecilnya dan dicatat di `alasan_tinjau`.
+- **Bagian CV:** judul seperti "Pengalaman Kerja"/"Work Experience" dan "Pendidikan"/"Education" dideteksi. Rentang tanggal di bagian pendidikan tidak dihitung sebagai pekerjaan.
+- **Tanggal:** nama bulan Indonesia dan Inggris (lengkap/singkatan), `MM/YYYY`, `YYYY-MM`, tahun saja, dan kata "sekarang"/"present" untuk pekerjaan yang masih berjalan.
+- **Nama perusahaan:** dicari di baris yang sama dengan tanggal atau 1–2 baris di atasnya. Prioritas pada teks yang memuat penanda badan usaha (PT, CV, Tbk, Inc, Ltd, dll.).
+
+**`keyakinan = rendah`** (→ `status_ekstraksi = perlu_tinjau`) jika salah satu terjadi: bagian pengalaman kerja tidak ditemukan, nama perusahaan hanya ditebak, bulan tidak disebut (hanya tahun), skill pendek ditemukan, atau tidak ada riwayat kerja sama sekali (bisa fresh graduate, bisa juga format tidak terbaca). Setiap alasan ditulis di `alasan_tinjau` agar HR tahu apa yang harus dicek.
+
+**Mode `ai`:** output divalidasi dengan skema yang sama. Jika tidak valid, dicoba sekali lagi; jika masih gagal, `status_ekstraksi = gagal`.
+
+**Langkah 3 — tinjauan HR.** CV berstatus `perlu_tinjau` atau `gagal` masuk antrean tinjauan. HR melihat PDF dan hasil ekstraksi berdampingan, memperbaikinya, lalu menyimpan. Hasilnya `sumber_ekstraksi = manual`, `status_ekstraksi = berhasil`, dan skor dihitung ulang. Hasil koreksi manual tidak ditimpa oleh parse ulang otomatis.
+
+Semua perhitungan (total bulan, jumlah perusahaan, pencocokan skill dengan lowongan) tetap dilakukan scoring engine di backend.
 
 ## 5. Integrity Signals (Pengawasan Ujian)
 - **Deteksi Fokus (Out of Focus):** Mendengarkan `visibilitychange` dan `blur`/`focus`, tetapi dihitung per **episode**:

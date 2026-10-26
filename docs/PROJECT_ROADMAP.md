@@ -2,7 +2,7 @@
 
 # 0. Aturan Penggunaan Roadmap
 1. Jangan menganggap task selesai hanya karena kode sudah dibuat; harus memenuhi Definition of Done (DoD).
-2. AI (LLM) tidak digunakan untuk komputasi matematika, hanya ekstraksi.
+2. Parser CV (regex maupun AI) tidak digunakan untuk komputasi matematika, hanya ekstraksi.
 3. Integrity Signals tidak memotong skor teknis.
 4. Export data dieksekusi di client-side.
 5. Error deteksi kamera (hardware not found) tidak memblokir ujian.
@@ -46,11 +46,13 @@
   - Ujian belum dikerjakan → skor_akhir null.
 - [x] 2.9 Fungsi validasi soal dan penilaian jawaban pilihan ganda → skor_pencapaian. → DoD: test mencakup soal tidak dijawab = salah, poin berbeda per soal, soal nonaktif tidak dihitung, jawaban untuk soal asing atau opsi asing ditolak.
 
-# 4. Tahap 3 — AI Parser & Extraction
-- [ ] 3.1 Integrasi backend dengan API LLM / Ollama.
-- [ ] 3.2 Endpoint upload CV dan ekstraksi JSON (skills, riwayat_kerja) dengan validasi skema. → DoD: output tidak valid dicoba ulang satu kali, lalu ditandai `gagal` tanpa menolak lamaran.
-- [ ] 3.3 Hitung total_bulan_kerja & jumlah_perusahaan memakai fungsi dari Tahap 2, lalu simpan ke tabel `cv_data`.
-- [ ] 3.4 Uji akurasi ekstraksi dengan minimal 5 CV contoh (termasuk CV berbahasa Indonesia). → DoD: hasil dibandingkan manual dan dicatat.
+# 4. Tahap 3 — Parser CV
+- [x] 3.1 Ekstraksi teks dari PDF dengan baris terjaga. → DoD: PDF tanpa teks (scan) menghasilkan `gagal` dengan alasan jelas, bukan crash.
+- [x] 3.2 Parser regex: skill, rentang tanggal (ID/EN), nama perusahaan, deteksi bagian CV, keyakinan + alasan tinjau. → DoD: test mencakup CV berbahasa Indonesia dan Inggris, CV tanpa judul bagian, tanggal tahun saja, pekerjaan "sampai sekarang", bagian pendidikan yang tidak boleh dihitung, skill pendek yang ambigu.
+- [x] 3.3 Orkestrator mode `regex` | `ai` | `gabungan` dengan skema output yang sama untuk semua mode. → DoD: mode `gabungan` hanya memanggil AI saat keyakinan regex rendah (diuji dengan parser AI palsu).
+- [ ] 3.4 Parser AI (Claude/OpenAI/Ollama) dengan validasi skema. → DoD: output tidak valid dicoba ulang satu kali, lalu ditandai `gagal` tanpa menolak lamaran.
+- [ ] 3.5 Simpan hasil ke `cv_data` dan hitung total_bulan_kerja & jumlah_perusahaan memakai fungsi dari Tahap 2 (dikerjakan bersama endpoint lamaran di 4.1).
+- [ ] 3.6 Uji akurasi dengan minimal 5 CV **asli** (dianonimkan, termasuk CV berbahasa Indonesia), untuk setiap mode yang tersedia. → DoD: hasil dibandingkan manual dan dicatat per kolom (skill, tanggal, perusahaan). CV contoh buatan sendiri tidak dihitung, karena parser bisa saja hanya cocok dengan contoh yang dibuat untuknya.
 
 # 5. Tahap 4 — Halaman Kandidat
 - [ ] 4.1 Daftar lowongan terbuka dan formulir lamaran (data diri, ekspektasi gaji, pertanyaan ketersediaan waktu, persetujuan data, upload CV).
@@ -65,6 +67,9 @@
 - [ ] 5.4 Tampilan metrik Integrity Signals berdampingan dengan skor ujian (contoh: "Out of focus: 3x / 14 detik", "Akses Kamera: hardware_not_found").
 - [ ] 5.5 Client-side Export ke CSV/XLSX.
 - [ ] 5.6 Halaman kelola soal per tes (tambah, ubah, urutkan, nonaktifkan, pratinjau seperti yang dilihat kandidat). → DoD: soal terkunci ditampilkan sebagai tidak bisa diubah, dengan alasan yang jelas.
+- [ ] 5.7 Antrean tinjauan CV + endpoint koreksi data CV: PDF dan hasil ekstraksi berdampingan, alasan tinjau ditampilkan, HR bisa mengedit skill dan riwayat kerja. → DoD: setelah disimpan, `sumber_ekstraksi = manual`, status `berhasil`, skor dihitung ulang, dan koreksi tidak tertimpa parse ulang.
+- [ ] 5.8 Endpoint + tombol ubah status lamaran (`dilamar` → `ujian` → `selesai` → `diterima`/`ditolak`). → DoD: transisi yang tidak masuk akal ditolak; kandidat hanya bisa melihat status lamarannya sendiri.
+- [ ] 5.9 Halaman detail kandidat: rincian alasan skor (skill ditemukan/tidak, entri riwayat yang dibuang, skor per tes dan jawaban per soal, gaji vs budget), log integritas, tombol buka CV (signed URL).
 
 # 7. Tahap 6 — Dummy Data Seeder
 - [ ] 6.1 Pembuatan skrip injeksi database (termasuk akun rekruter dan kandidat demo).

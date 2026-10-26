@@ -1,0 +1,5 @@
+Pengalaman Kerja
+Backend Engineer di PT Awan Nusantara | 01/2020 - 06/2024
+Mengembangkan layanan dengan Go dan C. Tim sering go live tiap minggu.
+Keahlian
+Golang, C++, Rust

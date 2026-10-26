@@ -1,6 +1,6 @@
 # Sistem Rekrutmen
 
-Sistem rekrutmen dengan scoring engine transparan, bank soal pilihan ganda yang bisa diisi sendiri oleh rekruter, parser CV berbasis LLM, dan integrity signals untuk ujian online.
+Sistem rekrutmen dengan scoring engine transparan, bank soal pilihan ganda yang bisa diisi sendiri oleh rekruter, parser CV yang bisa memakai regex, AI, atau keduanya, dan integrity signals untuk ujian online.
 
 Dokumentasi: [arsitektur](docs/RECRUITMENT_ARCHITECTURE.md) · [API contract](docs/API_CONTRACT.md) · [roadmap](docs/PROJECT_ROADMAP.md)
 
@@ -11,7 +11,8 @@ Dokumentasi: [arsitektur](docs/RECRUITMENT_ARCHITECTURE.md) · [API contract](do
 | 0 | API contract | Selesai (folder frontend menyusul di Tahap 4) |
 | 1 | Server Express, skema database, storage privat, login & peran, CRUD lowongan, bank soal | Selesai |
 | 2 | Scoring engine + penilaian soal pilihan ganda | Selesai |
-| 3–6 | Parser CV, halaman kandidat & rekruter, seeder | Belum |
+| 3 | Parser CV: ekstraksi teks PDF, parser regex, orkestrator mode regex/ai/gabungan | Sebagian (parser AI dan uji dengan CV asli belum) |
+| 4–6 | Halaman kandidat & rekruter, seeder | Belum |
 
 ## Menjalankan di komputer sendiri
 
@@ -55,7 +56,7 @@ Server menolak menyala jika konfigurasi kurang atau database tidak bisa dihubung
 ## Test
 
 ```bash
-npm test                  # 60 unit test (scoring engine, tanpa database)
+npm test                  # 93 unit test (scoring engine + parser CV, tanpa database)
 npm run test:integration  # 41 test endpoint ke PostgreSQL sungguhan
 npm run test:all          # keduanya
 npm run lint
@@ -80,8 +81,13 @@ backend/
     routes/              health, auth, lowongan, soal, files
     storage/             storage disk lokal + signed URL
     scoring/             fungsi murni: skor kandidat, validasi, penilaian soal
+    cv/                  PDF → teks, parser regex, orkestrator mode parser
+  scripts/
+    buat-pdf-contoh.py   membuat ulang PDF contoh untuk test (butuh reportlab)
   test/
-    *.test.js            unit test scoring engine
+    *.test.js            unit test scoring engine dan parser CV
+    fixtures/cv/         contoh teks CV beragam format (fiktif)
+    fixtures/pdf/        contoh PDF: berteks dan hasil scan (fiktif)
     integration/         test endpoint dengan supertest + PostgreSQL
 docs/
 ```
@@ -99,6 +105,12 @@ docs/
 - **Kunci jawaban tidak pernah dikirim ke browser kandidat.**
 - **Soal yang sudah dijawab dikunci**: tidak bisa diubah atau dihapus, hanya dinonaktifkan. Jika tidak, mengganti kunci jawaban akan mengubah arti skor kandidat lama tanpa ada yang sadar. Database ikut menjaga ini (`ON DELETE RESTRICT`).
 - **Konfigurasi tes hanya bisa diubah saat lowongan berstatus draf.** Lowongan draf pasti belum punya pelamar.
+
+**Parser CV**
+- **Tiga mode, satu bentuk output.** `regex` (gratis, lokal, bisa dijelaskan), `ai`, atau `gabungan` (AI hanya untuk CV yang membuat regex ragu). Scoring engine tidak tahu dan tidak perlu tahu sumbernya.
+- **Parser tidak pernah menolak lamaran.** CV yang meragukan diberi status `perlu_tinjau` beserta alasannya (misalnya "2 rentang kerja hanya menyebut tahun"), lalu dikoreksi HR.
+- **Bagian CV dikenali.** Tanggal di bagian Pendidikan dan Pengalaman Organisasi tidak dihitung sebagai pengalaman kerja.
+- **Longest match untuk skill.** "Tailwind CSS" tidak ikut menghasilkan "CSS". Akibatnya, kandidat yang hanya menulis "Tailwind CSS" tidak dianggap punya skill "CSS"; jika HR menganggapnya setara, tambahkan alias.
 
 **Keamanan**
 - Peran user dibaca dari database setiap request, bukan dari token, sehingga token lama tidak bisa dipakai untuk menaikkan hak akses.
@@ -119,3 +131,5 @@ docs/
 - Bobot 30/20/30/10/10 dan ambang tenure 6/12 bulan adalah tebakan awal, belum divalidasi terhadap hasil rekrutmen sungguhan.
 - Durasi kerja dihitung inklusif (Jan–Jun = 6 bulan). Dua pekerjaan yang waktunya tumpang tindih dijumlahkan apa adanya, tidak digabung.
 - Kamus alias skill masih kecil dan perlu ditambah sesuai CV yang masuk.
+- **Akurasi parser regex belum diukur dengan CV asli.** Semua contoh di `test/fixtures` dibuat sendiri, jadi lulusnya test hanya membuktikan parser bekerja untuk format yang sudah diantisipasi. Akurasi sebenarnya baru diketahui di task 3.6 dengan minimal 5 CV asli yang dianonimkan.
+- CV hasil scan/foto tidak bisa dibaca (belum ada OCR) dan selalu masuk antrean tinjauan manual.
