@@ -1,55 +1,118 @@
 # Sistem Rekrutmen
 
-Sistem rekrutmen dengan scoring engine transparan, parser CV berbasis LLM, dan integrity signals untuk ujian online.
+Sistem rekrutmen dengan scoring engine transparan, bank soal pilihan ganda yang bisa diisi sendiri oleh rekruter, parser CV berbasis LLM, dan integrity signals untuk ujian online.
 
-Dokumentasi: [arsitektur](docs/RECRUITMENT_ARCHITECTURE.md) · [roadmap](docs/PROJECT_ROADMAP.md)
+Dokumentasi: [arsitektur](docs/RECRUITMENT_ARCHITECTURE.md) · [API contract](docs/API_CONTRACT.md) · [roadmap](docs/PROJECT_ROADMAP.md)
 
 ## Status
 
 | Tahap | Isi | Status |
 |---|---|---|
-| 2 | Scoring engine + penilaian soal pilihan ganda (fungsi murni + test) | Selesai |
-| 0, 1, 3–6 | Setup, database, parser CV, halaman kandidat & rekruter, seeder | Belum |
+| 0 | API contract | Selesai (folder frontend menyusul di Tahap 4) |
+| 1 | Server Express, skema database, storage privat, login & peran, CRUD lowongan, bank soal | Selesai |
+| 2 | Scoring engine + penilaian soal pilihan ganda | Selesai |
+| 3–6 | Parser CV, halaman kandidat & rekruter, seeder | Belum |
 
-## Menjalankan test
+## Menjalankan di komputer sendiri
 
-Butuh Node.js 20 atau lebih baru.
+Butuh **Node.js 20+** dan **PostgreSQL 14+**.
+
+### 1. Siapkan PostgreSQL (Ubuntu / Linux Mint)
+
+```bash
+sudo apt install postgresql
+sudo -u postgres psql -c "CREATE USER rekrutmen WITH PASSWORD 'rekrutmen';"
+sudo -u postgres createdb -O rekrutmen rekrutmen
+sudo -u postgres createdb -O rekrutmen rekrutmen_test
+```
+
+### 2. Siapkan backend
 
 ```bash
 cd backend
 npm install
-npm test     # 60 test
+cp .env.example .env
+cp .env.test.example .env.test
+```
+
+Isi `JWT_SECRET` dan `STORAGE_SIGNING_SECRET` di `.env` dengan dua nilai acak yang **berbeda**. Jalankan perintah ini dua kali untuk mendapatkannya:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+### 3. Buat tabel dan jalankan
+
+```bash
+npm run migrate
+npm run dev
+```
+
+Buka http://localhost:3000/health. Jika muncul `{"status":"ok","database":"ok"}`, backend siap.
+
+Server menolak menyala jika konfigurasi kurang atau database tidak bisa dihubungi, dan pesannya menyebut apa yang harus diperbaiki.
+
+## Test
+
+```bash
+npm test                  # 60 unit test (scoring engine, tanpa database)
+npm run test:integration  # 41 test endpoint ke PostgreSQL sungguhan
+npm run test:all          # keduanya
 npm run lint
 ```
+
+Test integrasi **mengosongkan** database di `TEST_DATABASE_URL` setiap kali berjalan. Sebagai pengaman, test menolak berjalan jika nama databasenya tidak mengandung kata `test`. Jika `.env.test` belum ada, test integrasi dilewati dengan pesan, bukan gagal.
 
 ## Struktur
 
 ```
 backend/
-  src/scoring/
-    index.js          hitungSkorKandidat(lowongan, kandidat) — titik masuk
-    validasi.js       cek invariant lowongan (skill wajib, budget, bobot tes)
-    skills.js         normalisasi skill + kamus alias
-    cv.js             skor kesesuaian CV
-    riwayatKerja.js   riwayat kerja mentah → total bulan & jumlah perusahaan
-    tenure.js         skor tenure (termasuk fresh graduate)
-    tes.js            normalisasi batas bawah + rata-rata tertimbang
-    anggaranWaktu.js  skor anggaran & ketersediaan waktu
-    soal.js           validasi soal, penilaian jawaban, versi soal tanpa kunci
+  src/
+    server.js            titik masuk: config → database → app → listen
+    app.js               menyusun Express (bisa diuji tanpa listen)
+    config.js            validasi environment
+    db/
+      migrations/        file SQL berurutan (001_skema_awal.sql, ...)
+      migrate.js         runner migrasi (advisory lock, satu transaksi per file)
+      pool.js            koneksi + helper transaksi
+    auth/                hash password (scrypt), JWT, requireAuth, requireRole
+    http/                format error, validasi body (zod)
+    routes/              health, auth, lowongan, soal, files
+    storage/             storage disk lokal + signed URL
+    scoring/             fungsi murni: skor kandidat, validasi, penilaian soal
   test/
-    fixtures/         data lowongan & kandidat (JSON statis)
-    komponen.test.js  test per fungsi
-    agregat.test.js   test skor akhir dari fixture
-    soal.test.js      test bank soal pilihan ganda
+    *.test.js            unit test scoring engine
+    integration/         test endpoint dengan supertest + PostgreSQL
+docs/
 ```
 
-## Keputusan desain scoring
+## Keputusan desain
 
+**Scoring**
 - **Data belum lengkap → `null`, bukan 0.** Kandidat yang belum ujian atau CV-nya gagal diekstrak tidak terlihat buruk; dashboard menampilkan "belum lengkap".
 - **Fresh graduate → Tenure 50 (netral) + flag `tanpa_riwayat_kerja`.** Guard ditaruh sebelum pembagian karena `0 / 0` di JavaScript menghasilkan `NaN`, yang tanpa guard jatuh ke cabang skor 100.
 - **Pembulatan hanya sekali di akhir**, supaya selisih pembulatan tidak menumpuk.
-- **Soal ujian adalah data, bukan kode.** Rekruter bisa membuat soal pilihan ganda sendiri; kunci jawaban tidak pernah dikirim ke browser kandidat, dan soal yang sudah dijawab dikunci agar skor lama tidak berubah.
 - **LLM hanya mengekstrak**; semua hitungan (bulan kerja, pencocokan skill) dilakukan di kode yang bisa diuji.
+
+**Bank soal**
+- **Soal adalah data, bukan kode.** Rekruter membuat soal pilihan ganda sendiri lewat API; scoring engine tidak berubah.
+- **Kunci jawaban tidak pernah dikirim ke browser kandidat.**
+- **Soal yang sudah dijawab dikunci**: tidak bisa diubah atau dihapus, hanya dinonaktifkan. Jika tidak, mengganti kunci jawaban akan mengubah arti skor kandidat lama tanpa ada yang sadar. Database ikut menjaga ini (`ON DELETE RESTRICT`).
+- **Konfigurasi tes hanya bisa diubah saat lowongan berstatus draf.** Lowongan draf pasti belum punya pelamar.
+
+**Keamanan**
+- Peran user dibaca dari database setiap request, bukan dari token, sehingga token lama tidak bisa dipakai untuk menaikkan hak akses.
+- Data milik rekruter lain dijawab 404, bukan 403, supaya keberadaannya tidak bocor.
+- Pesan login gagal sama untuk email tak terdaftar dan password salah, dan waktu responsnya disamakan.
+- Berkas CV hanya bisa dibaca lewat URL bertanda tangan yang kedaluwarsa dalam 5 menit.
+- Password di-hash dengan `scrypt` bawaan Node, tanpa modul native yang sering gagal di-install.
+
+## Batasan yang diketahui
+
+- **Belum ada pembatasan percobaan login (rate limit).** Perlu ditambahkan sebelum dipakai publik.
+- **Pendaftaran rekruter terbuka** (`ALLOW_REKRUTER_SIGNUP=true`) supaya calon klien bisa mencoba demo. Di produksi sebaiknya `false`, dan akun rekruter dibuat lewat undangan.
+- Storage baru mendukung disk lokal. Untuk deploy di server tanpa disk permanen, perlu driver S3/Supabase.
+- Menambah soal ke tes yang sedang dibuka mengubah total poin untuk kandidat **berikutnya**. Skor kandidat yang sudah mengirim ujian tidak berubah karena disimpan saat dikirim.
 
 ## Asumsi yang belum diuji dengan data nyata
 

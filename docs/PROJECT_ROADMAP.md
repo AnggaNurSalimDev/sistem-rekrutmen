@@ -17,16 +17,16 @@
 - DoD tambahan per task ditulis setelah tanda "→ DoD:".
 
 # 1. Tahap 0 — Project Planning & Control
-- [ ] 0.1 Setup repository, `.env.example`, folder frontend/backend. → DoD: `npm run dev` jalan di kedua folder dari clone bersih.
-- [ ] 0.2 Finalisasi API Contract antara frontend dan backend. → DoD: semua endpoint tertulis (method, path, peran yang diizinkan, body, respons, kode error).
+- [ ] 0.1 Setup repository, `.env.example`, folder frontend/backend. → DoD: `npm run dev` jalan di kedua folder dari clone bersih. *(Backend selesai; folder frontend dibuat di Tahap 4.)*
+- [x] 0.2 Finalisasi API Contract antara frontend dan backend ([API_CONTRACT.md](API_CONTRACT.md); diperbarui tiap tahap). → DoD: semua endpoint tertulis (method, path, peran yang diizinkan, body, respons, kode error).
 
 # 2. Tahap 1 — Database, Infrastruktur & Autentikasi
-- [ ] 1.1 Inisialisasi peladen Node.js & Express. → DoD: endpoint `/health` merespons 200.
-- [ ] 1.2 Skema database PostgreSQL (users, lowongan, lowongan_tes, kandidat, cv_data, ujian_teknis, integritas) melalui migrasi. → DoD: constraint dan invariant tingkat database aktif (UNIQUE user_id+lowongan_id, CHECK budget > 0, CHECK target > batas_bawah).
-- [ ] 1.3 Setup Object Storage privat untuk unggahan PDF. → DoD: berkas hanya bisa diakses lewat signed URL.
-- [ ] 1.4 Registrasi, login (JWT), dan middleware peran (`rekruter` | `kandidat`). → DoD: kandidat mendapat 403 saat mengakses endpoint rekruter.
-- [ ] 1.5 CRUD lowongan dan konfigurasi tes per lowongan (khusus rekruter). → DoD: lowongan tanpa skill wajib, atau bobot tes yang jumlahnya bukan 1, ditolak dengan pesan jelas.
-- [ ] 1.6 CRUD bank soal pilihan ganda per tes (khusus rekruter). → DoD: soal dengan kunci yang bukan salah satu opsi ditolak; soal yang sudah dijawab kandidat tidak bisa diubah atau dihapus (hanya dinonaktifkan); lowongan tidak bisa dibuka jika ada tes tanpa soal aktif.
+- [x] 1.1 Inisialisasi peladen Node.js & Express. → DoD: endpoint `/health` merespons 200.
+- [x] 1.2 Skema database PostgreSQL (users, lowongan, lowongan_tes, kandidat, cv_data, ujian_teknis, integritas) melalui migrasi. → DoD: constraint dan invariant tingkat database aktif (UNIQUE user_id+lowongan_id, CHECK budget > 0, CHECK target > batas_bawah).
+- [x] 1.3 Setup Object Storage privat untuk unggahan PDF. → DoD: berkas hanya bisa diakses lewat signed URL. *(Driver disk lokal; driver S3/Supabase menyusul saat deploy.)*
+- [x] 1.4 Registrasi, login (JWT), dan middleware peran (`rekruter` | `kandidat`). → DoD: kandidat mendapat 403 saat mengakses endpoint rekruter.
+- [x] 1.5 CRUD lowongan dan konfigurasi tes per lowongan (khusus rekruter). → DoD: lowongan tanpa skill wajib, atau bobot tes yang jumlahnya bukan 1, ditolak dengan pesan jelas.
+- [x] 1.6 CRUD bank soal pilihan ganda per tes (khusus rekruter). → DoD: soal dengan kunci yang bukan salah satu opsi ditolak; soal yang sudah dijawab kandidat tidak bisa diubah atau dihapus (hanya dinonaktifkan); lowongan tidak bisa dibuka jika ada tes tanpa soal aktif.
 
 # 3. Tahap 2 — Scoring Engine (Independen)
 *Dikerjakan lebih awal karena berupa fungsi murni dan bisa diuji tanpa web atau database.*

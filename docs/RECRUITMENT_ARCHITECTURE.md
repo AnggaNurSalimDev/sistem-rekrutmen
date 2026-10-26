@@ -5,21 +5,22 @@ Sistem menggunakan arsitektur terpisah antara antarmuka dan peladen:
 - **Web Aplikasi (Frontend):** Satu aplikasi React dengan login berbasis peran (`rekruter` dan `kandidat`). Rute dan menu dibatasi sesuai peran.
 - **Backend:** Node.js + Express. Autentikasi JWT; setiap endpoint memeriksa peran (middleware `requireRole`).
 - **Database:** PostgreSQL (untuk data terstruktur)
-- **Object Storage:** AWS S3 / Supabase Storage (untuk berkas PDF CV). Bucket privat; akses berkas hanya lewat signed URL berumur pendek.
+- **Object Storage:** untuk berkas PDF CV. Saat ini driver disk lokal (`STORAGE_DRIVER=local`); driver AWS S3 / Supabase Storage cukup mengikuti antarmuka yang sama. Berkas privat; akses hanya lewat signed URL (HMAC) berumur pendek.
 - **AI Parser:** LLM API (Claude/OpenAI) atau Model Lokal (Ollama - Phi-3/Qwen). Hanya mengekstraksi data mentah, tidak menghitung apa pun.
 
 ## 2. Struktur Database (PostgreSQL)
 - **`users`:** id, email (unik), password_hash, role (`rekruter` | `kandidat`), dibuat_pada
-- **`lowongan`:** id, dibuat_oleh (FK users), posisi, budget_maksimal, skill_wajib (array, minimal 1), skill_opsional (array), kebutuhan_waktu (teks, contoh: "Shift pagi Senin–Sabtu"), status (`buka` | `tutup`)
-- **`lowongan_tes`:** id, lowongan_id, jenis_tes, target_skor, batas_bawah, bobot
+- **`lowongan`:** id, dibuat_oleh (FK users), posisi, budget_maksimal, skill_wajib (array, minimal 1), skill_opsional (array), kebutuhan_waktu (teks, contoh: "Shift pagi Senin–Sabtu"), status (`draf` | `buka` | `tutup`, default `draf`)
+- **`lowongan_tes`:** id, lowongan_id, jenis_tes (unik per lowongan), target_skor, batas_bawah, bobot, urutan
 - **`kandidat`** (satu baris = satu lamaran): id, user_id, lowongan_id, nama, email, nomor_kontak, ekspektasi_gaji, ketersediaan_waktu (`penuh` | `sebagian` | `tidak`), persetujuan_data (boolean + waktu), status_aplikasi, skor_akhir (nullable), rincian_skor (JSON), skor_dihitung_pada
   - Constraint: UNIQUE (user_id, lowongan_id)
-- **`cv_data`:** kandidat_id, url_cv, status_ekstraksi (`berhasil` | `gagal` | `perlu_tinjau`), skills_mentah (JSON), skills_ternormalisasi (JSON), riwayat_kerja (JSON: `[{perusahaan, mulai, selesai | null}]`), total_bulan_kerja, jumlah_perusahaan
+- **`cv_data`:** kandidat_id, kunci_berkas (kunci di storage, bukan URL — URL dibuat saat dibutuhkan karena kedaluwarsa), status_ekstraksi (`menunggu` | `berhasil` | `gagal` | `perlu_tinjau`), skills_mentah (JSON), skills_ternormalisasi (JSON), riwayat_kerja (JSON: `[{perusahaan, mulai, selesai | null}]`), total_bulan_kerja, jumlah_perusahaan
   - `total_bulan_kerja` dan `jumlah_perusahaan` dihitung oleh backend dari `riwayat_kerja`, bukan oleh LLM.
-- **`soal`:** id, lowongan_tes_id, pertanyaan, opsi (JSON: `[{id, teks}]`), kunci_opsi_id, poin (default 1), urutan, aktif (boolean), terkunci (boolean)
+- **`soal`:** id, lowongan_tes_id, pertanyaan, opsi (JSON: `[{id, teks}]`), kunci_opsi_id, poin (default 1), urutan, aktif (boolean)
+  - `terkunci` tidak disimpan sebagai kolom, tetapi dihitung dari ada tidaknya baris di `jawaban_kandidat`, sehingga tidak bisa tidak sinkron.
 - **`jawaban_kandidat`:** kandidat_id, soal_id, opsi_dipilih (nullable), benar (boolean, dihitung server), dijawab_pada
-  - Constraint: UNIQUE (kandidat_id, soal_id)
-- **`ujian_teknis`:** kandidat_id, lowongan_tes_id, skor_pencapaian, durasi_pengerjaan, dikirim_pada
+  - Constraint: PRIMARY KEY (kandidat_id, soal_id); FK soal_id `ON DELETE RESTRICT` sehingga soal yang sudah dijawab tidak bisa dihapus bahkan lewat query manual.
+- **`ujian_teknis`:** kandidat_id, lowongan_tes_id, skor_pencapaian, durasi_pengerjaan_detik, dimulai_pada, dikirim_pada
   - `skor_pencapaian` dihitung server dari `jawaban_kandidat` saat ujian dikirim, lalu disimpan (tidak dihitung ulang dari soal yang mungkin berubah).
 - **`integritas`:** kandidat_id, status_kamera (`granted` | `denied` | `hardware_not_found` | `not_supported`), jumlah_keluar_fokus, total_detik_keluar_fokus, log_pelanggaran (JSON)
 
@@ -31,6 +32,11 @@ Sistem menggunakan arsitektur terpisah antara antarmuka dan peladen:
 - Lamaran hanya bisa dibuat untuk lowongan berstatus `buka`.
 - Setiap `soal`: pertanyaan tidak kosong, 2–6 opsi, id opsi unik, teks opsi tidak kosong, `kunci_opsi_id` adalah salah satu id opsi, `poin > 0`.
 - Lowongan hanya bisa diubah ke status `buka` jika setiap `lowongan_tes` punya minimal 1 soal aktif.
+- Konfigurasi tes (`lowongan_tes`) hanya bisa diubah saat lowongan `draf`. Lowongan yang sudah punya pelamar tidak bisa kembali ke `draf` atau dihapus, hanya ditutup.
+- Pada lowongan `buka`, soal aktif terakhir sebuah tes tidak bisa dinonaktifkan atau dihapus.
+- Invariant satu baris (CHECK, UNIQUE, FK) juga dipasang di database sebagai jaring pengaman; invariant lintas baris (jumlah bobot, soal aktif per tes) dijaga di aplikasi dalam transaksi.
+
+Detail endpoint: [API_CONTRACT.md](API_CONTRACT.md).
 
 ## 3. Logika Pembobotan (Scoring Engine)
 Scoring engine adalah kumpulan fungsi murni (tanpa akses database). Input: objek lowongan + objek kandidat. Output: skor per komponen + skor akhir.
@@ -100,5 +106,5 @@ Soal adalah data, bukan kode. Rekruter (termasuk calon klien yang mencoba demo) 
   - Hasilnya masuk ke Skor Tes Kemampuan (bagian 3) lewat normalisasi batas bawah, sama seperti sebelumnya.
 - **Keamanan kunci jawaban:** endpoint soal untuk kandidat tidak pernah menyertakan `kunci_opsi_id`. Penilaian hanya dilakukan di server.
 - **Urutan opsi diacak** per kandidat di browser. Karena jawaban disimpan sebagai id opsi, pengacakan tidak memengaruhi penilaian.
-- **Penguncian soal:** begitu ada satu kandidat yang menjawab sebuah soal, soal itu `terkunci = true` dan tidak bisa diubah atau dihapus, hanya bisa dinonaktifkan. Untuk mengganti isinya, rekruter membuat soal baru. Ini mencegah skor kandidat lama berubah diam-diam atau menjadi tidak bisa dijelaskan.
+- **Penguncian soal:** begitu ada satu kandidat yang menjawab sebuah soal, soal itu terkunci dan tidak bisa diubah atau dihapus, hanya bisa dinonaktifkan. Untuk mengganti isinya, rekruter membuat soal baru. Ini mencegah skor kandidat lama berubah diam-diam atau menjadi tidak bisa dijelaskan.
 - **Seeder** menyediakan satu set soal contoh per tes supaya demo langsung bisa dicoba.
