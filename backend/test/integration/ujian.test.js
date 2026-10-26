@@ -60,6 +60,20 @@ describe('4.2–4.4 Ujian & integrity signals', { skip: ALASAN_LEWATI }, () => {
     assert.equal(detail.body.data.tes[0].status, 'berlangsung');
   });
 
+  test('server menghitung berapa kali halaman tes dibuka ulang (tidak bisa dihapus dari browser)', async () => {
+    const { kandidat, lamaran } = await lamaranBaru();
+    const tesId = lowongan.tes[1].id;
+    await mulai(kandidat, lamaran, tesId);
+    await mulai(kandidat, lamaran, tesId);
+    await mulai(kandidat, lamaran, tesId);
+    await kirim(kandidat, lamaran, tesId, { jawaban: [], integritas: integritasBersih });
+    const { rows } = await api.pool.query('SELECT log_pelanggaran FROM integritas WHERE kandidat_id = $1', [lamaran.id]);
+    assert.deepEqual(
+      rows[0].log_pelanggaran.filter((l) => l.jenis === 'dibuka_ulang').map((l) => l.jumlah),
+      [2],
+    );
+  });
+
   test('alur lengkap: dua tes dikirim → skor akhir terhitung (sementara), soal terkunci, status selesai', async () => {
     const { kandidat, lamaran } = await lamaranBaru();
     const [logika, coding] = lowongan.tes;

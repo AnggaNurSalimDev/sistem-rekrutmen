@@ -17,7 +17,7 @@
 - DoD tambahan per task ditulis setelah tanda "→ DoD:".
 
 # 1. Tahap 0 — Project Planning & Control
-- [ ] 0.1 Setup repository, `.env.example`, folder frontend/backend. → DoD: `npm run dev` jalan di kedua folder dari clone bersih. *(Backend selesai; folder frontend dibuat di Tahap 4.)*
+- [x] 0.1 Setup repository, `.env.example`, folder frontend/backend. → DoD: `npm run dev` jalan di kedua folder dari clone bersih.
 - [x] 0.2 Finalisasi API Contract antara frontend dan backend ([API_CONTRACT.md](API_CONTRACT.md); diperbarui tiap tahap). → DoD: semua endpoint tertulis (method, path, peran yang diizinkan, body, respons, kode error).
 
 # 2. Tahap 1 — Database, Infrastruktur & Autentikasi
@@ -60,10 +60,11 @@
 - [ ] 3.7 Uji akurasi dengan CV **asli** memakai API sungguhan (butuh API key; biayanya kecil). → DoD: dua CV pemilik proyek lulus, yaitu tidak ada tanggal karangan dan ketiga tempat kerja ditemukan; hasil per kolom dicatat. CV buatan sendiri tidak dihitung.
 
 # 5. Tahap 4 — Halaman Kandidat
-- [ ] 4.1 Daftar lowongan terbuka dan formulir lamaran (data diri, ekspektasi gaji, pertanyaan ketersediaan waktu, persetujuan data, upload CV).
-- [ ] 4.2 Modul ujian pilihan ganda (soal dari bank soal, urutan opsi diacak). → DoD: hasil ujian tersimpan per jenis tes; respons API soal untuk kandidat tidak memuat kunci jawaban.
-- [ ] 4.3 Modul Integrity Signals: deteksi keluar fokus berbasis episode dan request kamera. → DoD: satu kali pindah tab tercatat 1 episode, bukan 2.
-- [ ] 4.4 Penanganan edge case kamera tidak tersedia atau ditolak (kirim status tanpa blokir). → DoD: ujian tetap bisa diselesaikan di perangkat tanpa kamera.
+- [x] 4.1 Daftar lowongan terbuka dan formulir lamaran (data diri, ekspektasi gaji, pertanyaan ketersediaan waktu, persetujuan data, upload CV).
+- [x] 4.2 Modul ujian pilihan ganda (soal dari bank soal, urutan opsi diacak). → DoD: hasil ujian tersimpan per jenis tes; respons API soal untuk kandidat tidak memuat kunci jawaban.
+- [x] 4.3 Modul Integrity Signals: deteksi keluar fokus berbasis episode dan request kamera. → DoD: satu kali pindah tab tercatat 1 episode, bukan 2.
+- [x] 4.4 Penanganan edge case kamera tidak tersedia atau ditolak (kirim status tanpa blokir). → DoD: ujian tetap bisa diselesaikan di perangkat tanpa kamera.
+- [x] 4.5 Uji ujung ke ujung alur kandidat di browser sungguhan (`frontend/e2e/alur-kandidat.mjs`). → DoD: daftar → melamar dengan PDF → tes dengan satu kali pindah tab, muat ulang, dan kamera palsu → kirim; hitungan di database sesuai (2 episode, 1 kali dibuka ulang).
 
 # 6. Tahap 5 — Halaman Rekruter (Dashboard)
 - [ ] 5.1 Tabel analitik kandidat per lowongan dengan sorting & filter. → DoD: skor sementara selalu berlabel "belum diverifikasi" dan bisa difilter (misalnya hanya kandidat terverifikasi).

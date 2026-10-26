@@ -233,7 +233,9 @@ export function ruteLamaran({ pool, storage, parserAi, requireAuth, log = consol
 
       // Sesi yang sudah ada dilanjutkan (misalnya halaman dimuat ulang); waktu mulai tidak diulang.
       let { rows: sesi } = await db.query(
-        'SELECT soal_ids, dimulai_pada FROM sesi_ujian WHERE kandidat_id = $1 AND lowongan_tes_id = $2',
+        `UPDATE sesi_ujian SET jumlah_dibuka_ulang = jumlah_dibuka_ulang + 1
+         WHERE kandidat_id = $1 AND lowongan_tes_id = $2
+         RETURNING soal_ids, dimulai_pada`,
         [lamaran.id, tes.id],
       );
       if (sesi.length === 0) {
@@ -271,7 +273,8 @@ export function ruteLamaran({ pool, storage, parserAi, requireAuth, log = consol
       const tes = await ambilTesLamaran(db, lamaran, req.params.tesId);
 
       const { rows: sesi } = await db.query(
-        `SELECT soal_ids, dimulai_pada, GREATEST(0, floor(EXTRACT(EPOCH FROM now() - dimulai_pada)))::int AS durasi
+        `SELECT soal_ids, dimulai_pada, jumlah_dibuka_ulang,
+                GREATEST(0, floor(EXTRACT(EPOCH FROM now() - dimulai_pada)))::int AS durasi
          FROM sesi_ujian WHERE kandidat_id = $1 AND lowongan_tes_id = $2`,
         [lamaran.id, tes.id],
       );
@@ -311,6 +314,9 @@ export function ruteLamaran({ pool, storage, parserAi, requireAuth, log = consol
         { tesId: tes.id, jenis: 'kamera', statusKamera },
         ...episodeKeluarFokus.map((e) => ({ tesId: tes.id, jenis: 'keluar_fokus', detik: Math.round(e.detik) })),
         ...(dilaporkan > durasi ? [{ tesId: tes.id, jenis: 'dipotong', dilaporkan, durasi }] : []),
+        ...(sesi[0].jumlah_dibuka_ulang > 0
+          ? [{ tesId: tes.id, jenis: 'dibuka_ulang', jumlah: sesi[0].jumlah_dibuka_ulang }]
+          : []),
       ];
       await db.query(
         `INSERT INTO integritas (kandidat_id, status_kamera, jumlah_keluar_fokus, total_detik_keluar_fokus, log_pelanggaran)

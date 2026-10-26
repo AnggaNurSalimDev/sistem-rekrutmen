@@ -8,11 +8,12 @@ Dokumentasi: [arsitektur](docs/RECRUITMENT_ARCHITECTURE.md) · [API contract](do
 
 | Tahap | Isi | Status |
 |---|---|---|
-| 0 | API contract | Selesai (folder frontend menyusul di Tahap 4) |
+| 0 | API contract, struktur repo | Selesai |
 | 1 | Server Express, skema database, storage privat, login & peran, CRUD lowongan, bank soal | Selesai |
 | 2 | Scoring engine + penilaian soal pilihan ganda | Selesai |
 | 3 | Parser CV: ekstraksi teks PDF, parser AI Claude, verifikasi kutipan, sorotan, kata kunci sorot per lowongan | Sebagian (belum diuji dengan API sungguhan) |
-| 4–6 | Halaman kandidat & rekruter, seeder | Belum |
+| 4 | Halaman kandidat: lowongan, lamaran + upload CV, tes pilihan ganda dengan integrity signals | Selesai |
+| 5–6 | Dashboard rekruter, seeder data demo | Belum |
 
 ## Menjalankan di komputer sendiri
 
@@ -57,11 +58,25 @@ Isi `ANTHROPIC_API_KEY` di `.env` dengan API key Claude milik Anda, lalu jalanka
 
 Server menolak menyala jika konfigurasi kurang atau database tidak bisa dihubungi, dan pesannya menyebut apa yang harus diperbaiki.
 
+### 5. Jalankan frontend
+
+Di terminal lain:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Buka http://localhost:5173. Frontend memanggil backend di `http://localhost:3000`; jika berbeda, salin `frontend/.env.example` menjadi `frontend/.env.local` dan ubah `VITE_API_URL`.
+
+Untuk mencoba alur pelamar, perlu satu lowongan berstatus buka beserta soalnya. Dashboard rekruter belum ada (Tahap 5), jadi untuk sementara buat lewat API; skrip uji ujung ke ujung di bawah juga membuatnya otomatis.
+
 ## Test
 
 ```bash
 npm test                  # 98 unit test (scoring engine + parser CV, tanpa database dan tanpa API)
-npm run test:integration  # 70 test endpoint ke PostgreSQL sungguhan
+npm run test:integration  # 71 test endpoint ke PostgreSQL sungguhan
 npm run test:all          # keduanya
 npm run lint
 ```
@@ -69,6 +84,25 @@ npm run lint
 Test integrasi **mengosongkan** database di `TEST_DATABASE_URL` setiap kali berjalan. Sebagai pengaman, test menolak berjalan jika nama databasenya tidak mengandung kata `test`. Jika `.env.test` belum ada, test integrasi dilewati dengan pesan, bukan gagal.
 
 Test parser AI **tidak memanggil Claude sungguhan** (memakai `fetch` palsu), jadi gratis dan tidak butuh key. Test ini membuktikan alur, verifikasi kutipan, dan penanganan error, tetapi bukan seberapa akurat Claude membaca CV.
+
+Frontend:
+
+```bash
+cd frontend
+npm test       # 17 test logika ujian (episode keluar fokus, kamera, pengacak opsi)
+npm run lint
+npm run build
+```
+
+Uji ujung ke ujung alur pelamar di browser sungguhan (opsional, butuh backend + frontend berjalan dan Playwright):
+
+```bash
+cd frontend
+npm i -D playwright && npx playwright install chromium
+API_URL=http://localhost:3000 WEB_URL=http://localhost:5173 node e2e/alur-kandidat.mjs
+```
+
+Skrip ini membuat akun rekruter, lowongan, dan soal lewat API, lalu menjalankan: daftar → melamar dengan PDF → tes dengan satu kali pindah tab, muat ulang halaman, dan kamera palsu → kirim jawaban.
 
 ## Struktur
 
@@ -96,6 +130,14 @@ backend/
     fixtures/cv/         contoh teks CV (fiktif)
     fixtures/pdf/        contoh PDF: berteks dan hasil scan (fiktif)
     integration/         test endpoint dengan supertest + PostgreSQL
+frontend/
+  src/
+    api/klien.js         pemanggil API + format error
+    auth/                login, token, peran
+    halaman/             lowongan, detail + form lamaran, masuk/daftar, lamaran saya, tes
+    ujian/               pelacak keluar fokus, kamera, pengacak opsi berbenih
+  test/                  unit test logika ujian (Vitest)
+  e2e/                   uji ujung ke ujung alur pelamar (Playwright)
 docs/
 ```
 
@@ -124,6 +166,13 @@ docs/
 - **Kata kunci sorot dari rekruter.** Rekruter menulis kata atau kalimat yang dicari di setiap CV lowongan; penyorotannya di frontend dan tidak memengaruhi skor.
 - *Riwayat:* parser regex sempat dibuat, lalu diganti setelah diuji dengan CV asli yang ditulis sebagai kalimat dan tanpa tanggal. Kodenya ada di riwayat git.
 
+**Tes pelamar**
+- **Satu kali pindah tab = satu episode**, walau browser memicu beberapa event. Memuat ulang halaman juga dihitung, dan catatannya tidak hilang karena disimpan di perangkat. Server ikut menghitung berapa kali halaman tes dibuka ulang, terpisah dari catatan browser.
+- **Kamera tidak pernah memblokir tes.** Ditolak, tidak ada, atau tidak didukung: tes tetap berjalan, statusnya dicatat. Video hanya tampil di layar pelamar.
+- **Pelamar diberi tahu sebelum tes** apa saja yang dicatat. Skor dan catatan integritas tidak ditampilkan ke pelamar.
+- **Urutan opsi diacak per pelamar** dengan benih tetap, jadi tidak berubah saat halaman dimuat ulang. Draf jawaban juga tersimpan saat dimuat ulang.
+- **Soal dinilai sesuai yang dilihat pelamar**, walau rekruter mengubah bank soal di tengah tes.
+
 **Keamanan**
 - Peran user dibaca dari database setiap request, bukan dari token, sehingga token lama tidak bisa dipakai untuk menaikkan hak akses.
 - Data milik rekruter lain dijawab 404, bukan 403, supaya keberadaannya tidak bocor.
@@ -136,6 +185,8 @@ docs/
 - **Belum ada pembatasan percobaan login (rate limit).** Perlu ditambahkan sebelum dipakai publik.
 - **Pendaftaran rekruter terbuka** (`ALLOW_REKRUTER_SIGNUP=true`) supaya calon klien bisa mencoba demo. Di produksi sebaiknya `false`, dan akun rekruter dibuat lewat undangan.
 - Jika AI aktif, teks CV dikirim ke Anthropic. Formulir lamaran (Tahap 4) wajib meminta persetujuan untuk ini.
+- Token login disimpan di `localStorage`. Praktis untuk demo, tetapi rentan jika ada celah XSS; untuk produksi sebaiknya cookie `httpOnly`.
+- Lamaran diproses langsung saat dikirim; jika AI aktif, pelamar menunggu beberapa detik. Untuk volume besar sebaiknya dipindah ke antrean kerja di latar belakang.
 - Storage baru mendukung disk lokal. Untuk deploy di server tanpa disk permanen, perlu driver S3/Supabase.
 - Menambah soal ke tes yang sedang dibuka mengubah total poin untuk kandidat **berikutnya**. Skor kandidat yang sudah mengirim ujian tidak berubah karena disimpan saat dikirim.
 

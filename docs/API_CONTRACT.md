@@ -247,7 +247,7 @@ Email diambil dari akun yang login. Proses: CV disimpan (privat) → teks diekst
 ## Ujian — khusus `kandidat`, hanya lamaran sendiri
 
 ### `POST /lamaran/:id/ujian/:tesId/mulai`
-Membuat sesi ujian dan mengembalikan soalnya. Memanggil ulang (misalnya halaman dimuat ulang) mengembalikan sesi yang sama; waktu mulai tidak diulang.
+Membuat sesi ujian dan mengembalikan soalnya. Memanggil ulang (misalnya halaman dimuat ulang) mengembalikan sesi yang sama; waktu mulai tidak diulang, dan server menambah hitungan "dibuka ulang" yang ikut tercatat di log integritas.
 - 200:
   ```json
   { "data": { "tesId": "uuid", "jenisTes": "logika", "dimulaiPada": "ISO-8601",

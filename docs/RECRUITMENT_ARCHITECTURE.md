@@ -118,9 +118,12 @@ Semua perhitungan (total bulan, jumlah perusahaan, pencocokan skill dengan lowon
   - Episode dimulai pada event pertama yang menandakan hilang fokus (`blur` atau `hidden`).
   - Event hilang fokus lain selama episode masih terbuka diabaikan, sehingga satu kali pindah tab tidak terhitung dua kali.
   - Episode ditutup saat `focus` atau `visible`. Durasinya dijumlahkan.
-  - Hasil akhir: jumlah episode dan total detik (contoh: "3x / 14 detik").
+  - `pagehide` (memuat ulang atau menutup tab) juga membuka episode. Catatan disimpan di `sessionStorage` dan dipulihkan saat halaman tes dibuka lagi; episode yang terbuka ditutup saat itu, sehingga memuat ulang halaman ikut terhitung beserta durasinya. Tanpa ini, kandidat bisa menghapus catatan cukup dengan menekan refresh (ditemukan saat uji ujung ke ujung).
+  - Waktu memakai jam dinding (`Date.now`) supaya durasi tetap benar melewati muat ulang.
+  - Hasil akhir: jumlah episode dan total detik (contoh: "3x / 14 detik"). Total detik dipotong di server agar tidak melebihi lama ujian.
+- **Hitungan dari server:** setiap kali sesi ujian yang sudah ada dibuka lagi, server menambah `sesi_ujian.jumlah_dibuka_ulang`. Angka ini tidak bisa dihapus dari browser, dan ikut tercatat di log integritas saat jawaban dikirim.
 - **Kamera:** Bersifat psychological deterrent. Meminta akses `getUserMedia`. Video tidak direkam dan tidak disimpan; yang disimpan hanya status. Jika perangkat tidak ditemukan atau akses ditolak, ujian tetap berjalan dan status dicatat (`hardware_not_found` / `denied` / `not_supported`).
-- Data integritas dikirim dari browser, sehingga bisa dimanipulasi. Karena itu sinyal ini hanya bersifat indikatif.
+- Data keluar fokus dan status kamera dikirim dari browser, sehingga bisa dimanipulasi oleh kandidat yang paham teknis. Karena itu sinyal ini hanya bersifat indikatif. Kandidat diberi tahu sebelum tes dimulai apa saja yang dicatat.
 - Sistem tidak memotong skor teknis; dashboard hanya menampilkan peringatan objektivitas.
 
 ## 6. Privasi Data

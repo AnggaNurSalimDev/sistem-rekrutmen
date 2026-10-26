@@ -6,3 +6,5 @@ node_modules/
 /backend/storage/
 .DS_Store
 coverage/
+dist/
+.env.local
