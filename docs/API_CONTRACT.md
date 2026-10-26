@@ -191,8 +191,93 @@ URL ini dibuat server (berlaku `SIGNED_URL_TTL_SECONDS`, default 5 menit) dan di
 
 ---
 
+## Lowongan terbuka — publik (tanpa login)
+
+Untuk calon pelamar. Sengaja tidak memuat budget, kata kunci sorot, target/batas bawah/bobot tes.
+
+### `GET /lowongan-terbuka`
+- 200 `{ "data": [LowonganTerbuka] }`, terbaru dulu. Hanya status `buka`.
+
+`LowonganTerbuka` = `{ id, posisi, skillWajib, skillOpsional, kebutuhanWaktu, dibuatPada, tes: [{ id, jenisTes, jumlahSoal }] }`
+
+### `GET /lowongan-terbuka/:id`
+- 200 `{ "data": LowonganTerbuka }` · 404 (termasuk lowongan draf/tutup)
+
+---
+
+## Lamaran — khusus `kandidat`, hanya milik sendiri
+
+`Lamaran` (tampilan kandidat):
+```json
+{
+  "id": "uuid",
+  "lowongan": { "id": "uuid", "posisi": "Kasir", "status": "buka" },
+  "statusAplikasi": "dilamar | ujian | selesai | ditolak | diterima",
+  "dikirimPada": "ISO-8601",
+  "tes": [{ "id": "uuid", "jenisTes": "logika", "status": "belum | berlangsung | selesai" }]
+}
+```
+Skor, rincian skor, hasil ekstraksi CV, dan data integritas **tidak pernah** dikirim ke kandidat.
+
+### `POST /lamaran` — `multipart/form-data`
+| Field | Isi |
+|---|---|
+| `lowonganId` | UUID lowongan berstatus `buka` |
+| `nama` | 1–120 karakter |
+| `nomorKontak` | 8–20 karakter: angka, spasi, `+`, `-`, `()` |
+| `ekspektasiGaji` | bilangan bulat ≥ 0 (rupiah) |
+| `ketersediaanWaktu` | `penuh` \| `sebagian` \| `tidak` (jawaban atas `kebutuhanWaktu` lowongan) |
+| `persetujuanData` | harus `"true"` |
+| `cv` | berkas PDF, maksimal 10 MB |
+
+Email diambil dari akun yang login. Proses: CV disimpan (privat) → teks diekstrak → parser AI (jika aktif) → data CV dan skor awal disimpan. Bisa memakan waktu beberapa detik jika AI aktif.
+
+- 201 `{ "data": Lamaran }`. PDF hasil scan atau AI gagal **tetap 201**; CV-nya masuk antrean tinjauan HR.
+- 400 data tidak valid / bukan PDF / tanpa CV / persetujuan tidak dicentang
+- 404 lowongan tidak ada atau masih draf · 409 lowongan ditutup / sudah pernah melamar · 413 CV > 10 MB
+
+### `GET /lamaran`
+- 200 `{ "data": [Lamaran] }`, terbaru dulu.
+
+### `GET /lamaran/:id`
+- 200 `{ "data": Lamaran }` · 404 (termasuk lamaran milik orang lain)
+
+---
+
+## Ujian — khusus `kandidat`, hanya lamaran sendiri
+
+### `POST /lamaran/:id/ujian/:tesId/mulai`
+Membuat sesi ujian dan mengembalikan soalnya. Memanggil ulang (misalnya halaman dimuat ulang) mengembalikan sesi yang sama; waktu mulai tidak diulang.
+- 200:
+  ```json
+  { "data": { "tesId": "uuid", "jenisTes": "logika", "dimulaiPada": "ISO-8601",
+      "soal": [{ "id": "uuid", "pertanyaan": "...", "opsi": [{ "id": "a", "teks": "..." }] }] } }
+  ```
+  Tanpa kunci jawaban, poin, atau status aktif. Urutan opsi diacak oleh frontend.
+- 404 lamaran/tes tidak ada · 409 ujian sudah dikirim / lowongan ditutup (untuk sesi baru) / tes tanpa soal
+
+Soal yang ditampilkan dicatat di sesi. Penilaian memakai soal itu walau rekruter mengubah bank soal di tengah ujian.
+
+### `POST /lamaran/:id/ujian/:tesId/kirim`
+Body:
+```json
+{
+  "jawaban": [{ "soalId": "uuid", "opsiDipilih": "a" }],
+  "integritas": {
+    "statusKamera": "granted | denied | hardware_not_found | not_supported",
+    "episodeKeluarFokus": [{ "detik": 4.2 }]
+  }
+}
+```
+- `jawaban`: maksimal 500; `opsiDipilih` boleh `null`. Soal yang tidak dijawab dihitung salah.
+- `integritas` wajib. Satu episode = satu kali keluar fokus (pindah tab/jendela), berapa pun event browser yang terpicu. `detik` 0–86400, maksimal 1000 episode. Total detik dipotong agar tidak melebihi lama ujian (dicatat di log).
+- Skor dinilai di server, disimpan, dan skor akhir kandidat dihitung ulang. Setelah semua tes dikirim, `statusAplikasi` menjadi `selesai`.
+- 200 `{ "data": { "terkirim": true, "dikirimPada": "ISO-8601" } }`. Skor **tidak** dikirim ke kandidat.
+- 400 jawaban untuk soal di luar sesi / opsi tidak ada / jawaban dobel / integritas tidak valid
+- 404 · 409 ujian belum dimulai / sudah dikirim
+
+---
+
 ## Belum ada (tahap berikutnya)
 
-- Daftar lowongan terbuka untuk kandidat, formulir lamaran, upload CV (Tahap 3–4)
-- Mengambil soal ujian dan mengirim jawaban (Tahap 4)
-- Data kandidat, skor, dan integrity signals untuk dashboard (Tahap 5)
+- Data kandidat, skor, CV dengan sorotan, verifikasi CV, dan integrity signals untuk dashboard rekruter (Tahap 5)

@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual, randomUUID } from 'node:crypto';
-import { mkdir, writeFile, readFile, stat } from 'node:fs/promises';
+import { mkdir, writeFile, readFile, stat, rm } from 'node:fs/promises';
 import path from 'node:path';
 
 // Kunci berkas selalu dibuat server, tapi tetap divalidasi supaya
@@ -48,6 +48,11 @@ export function buatStorageLokal({ dir, signingSecret, publicBaseUrl, ttlDetik, 
       await mkdir(path.dirname(tujuan), { recursive: true });
       await writeFile(tujuan, buffer, { flag: 'wx' });
       return kunci;
+    },
+
+    /** Hapus berkas (dipakai saat lamaran gagal disimpan setelah CV terlanjur diunggah). */
+    async hapus(kunci) {
+      await rm(pathAman(kunci), { force: true });
     },
 
     /** URL sementara untuk membaca berkas (default TTL dari config). */

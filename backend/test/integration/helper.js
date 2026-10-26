@@ -1,4 +1,5 @@
 import { mkdtemp, rm } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import dotenv from 'dotenv';
@@ -12,6 +13,9 @@ import { buatApp } from '../../src/app.js';
 
 dotenv.config({ path: '.env.test', quiet: true });
 
+export const PDF_CONTOH = readFileSync(new URL('../fixtures/pdf/cv-dua-kolom.pdf', import.meta.url));
+export const PDF_SCAN = readFileSync(new URL('../fixtures/pdf/cv-scan-tanpa-teks.pdf', import.meta.url));
+
 export const URL_DB_TEST = process.env.TEST_DATABASE_URL;
 export const ALASAN_LEWATI = URL_DB_TEST
   ? false
@@ -24,7 +28,7 @@ const logSenyap = { error() {}, info() {} };
  * database wajib mengandung "test", supaya database development atau
  * produksi tidak pernah terhapus karena salah isi variabel.
  */
-export async function siapkan(overrideConfig = {}) {
+export async function siapkan(overrideConfig = {}, { parserAi = null } = {}) {
   const namaDb = new URL(URL_DB_TEST).pathname.slice(1);
   if (!/test/i.test(namaDb)) {
     throw new Error(`Menolak menjalankan test: nama database "${namaDb}" tidak mengandung "test"`);
@@ -50,7 +54,7 @@ export async function siapkan(overrideConfig = {}) {
     publicBaseUrl: config.PUBLIC_BASE_URL,
     ttlDetik: config.SIGNED_URL_TTL_SECONDS,
   });
-  const app = buatApp({ pool, config, storage, log: logSenyap });
+  const app = buatApp({ pool, config, storage, parserAi, log: logSenyap });
 
   let nomor = 0;
   const api = {
@@ -106,6 +110,25 @@ export async function siapkan(overrideConfig = {}) {
         [kandidatId, soalId, opsi],
       );
     },
+
+    /** Kirim lamaran lewat endpoint sungguhan (multipart + PDF). */
+    lamar(akun, lowonganId, { pdf = PDF_CONTOH, ubah = {} } = {}) {
+      const isian = {
+        lowonganId,
+        nama: 'Rina Kartika',
+        nomorKontak: '0812-3456-7890',
+        ekspektasiGaji: '7000000',
+        ketersediaanWaktu: 'penuh',
+        persetujuanData: 'true',
+        ...ubah,
+      };
+      let req = request(app).post('/lamaran').set(akun.auth);
+      for (const [k, v] of Object.entries(isian)) if (v !== undefined) req = req.field(k, v);
+      if (pdf) req = req.attach('cv', pdf, { filename: 'cv.pdf', contentType: 'application/pdf' });
+      return req;
+    },
+
+    dirStorage,
 
     async tutup() {
       await pool.end();

@@ -61,7 +61,7 @@ Server menolak menyala jika konfigurasi kurang atau database tidak bisa dihubung
 
 ```bash
 npm test                  # 98 unit test (scoring engine + parser CV, tanpa database dan tanpa API)
-npm run test:integration  # 47 test endpoint ke PostgreSQL sungguhan
+npm run test:integration  # 70 test endpoint ke PostgreSQL sungguhan
 npm run test:all          # keduanya
 npm run lint
 ```

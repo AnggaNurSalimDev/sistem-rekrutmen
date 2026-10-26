@@ -56,7 +56,7 @@
 - [x] 3.3 Verifikasi kutipan: temuan tanpa kutipan yang ada di CV dibuang; nama perusahaan harus tertulis; tanggal hanya dipercaya jika tahunnya terlihat di kutipan; kalimat yang tampak sebagai perintah untuk AI ditandai. → DoD: test mencakup kutipan karangan, nama perusahaan karangan, tanggal karangan, kutipan terpotong baris, dan upaya menutup tag `<cv>` dari dalam CV.
 - [x] 3.4 Mode tanpa AI: tanpa `ANTHROPIC_API_KEY`, CV berstatus `menunggu` (isi manual) dan `/health` menampilkan `fitur.parserAi = false`. → DoD: server tetap menyala dan lamaran tetap bisa diproses tanpa key.
 - [x] 3.5 Sorotan dari kutipan AI yang terbukti + kata kunci sorot per lowongan (`kataKunciSorot`, disimpan backend, disorot di frontend).
-- [ ] 3.6 Simpan hasil ke `cv_data` dan hitung skor (dikerjakan bersama endpoint lamaran di 4.1).
+- [x] 3.6 Simpan hasil ke `cv_data` dan hitung skor (dikerjakan bersama endpoint lamaran di 4.1).
 - [ ] 3.7 Uji akurasi dengan CV **asli** memakai API sungguhan (butuh API key; biayanya kecil). → DoD: dua CV pemilik proyek lulus, yaitu tidak ada tanggal karangan dan ketiga tempat kerja ditemukan; hasil per kolom dicatat. CV buatan sendiri tidak dihitung.
 
 # 5. Tahap 4 — Halaman Kandidat
