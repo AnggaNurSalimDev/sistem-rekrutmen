@@ -22,14 +22,18 @@ export async function hitungUlangSkor(db, kandidatId) {
   if (kandidatRows.length === 0) throw new Error(`Kandidat ${kandidatId} tidak ditemukan`);
   const k = kandidatRows[0];
 
-  const [{ rows: tes }, { rows: cvRows }, { rows: ujian }] = await Promise.all([
-    db.query('SELECT id, jenis_tes, target_skor, batas_bawah, bobot FROM lowongan_tes WHERE lowongan_id = $1', [
-      k.lowongan_id,
-    ]),
-    db.query('SELECT status_ekstraksi, terverifikasi, skills_mentah, riwayat_kerja FROM cv_data WHERE kandidat_id = $1', [
-      kandidatId,
-    ]),
-    db.query('SELECT lowongan_tes_id, skor_pencapaian FROM ujian_teknis WHERE kandidat_id = $1', [kandidatId]),
+  // Berurutan, bukan Promise.all: `db` bisa berupa satu koneksi transaksi, dan satu
+  // koneksi PostgreSQL hanya menjalankan satu query sekaligus (pg@9 akan menolaknya).
+  const { rows: tes } = await db.query(
+    'SELECT id, jenis_tes, target_skor, batas_bawah, bobot FROM lowongan_tes WHERE lowongan_id = $1',
+    [k.lowongan_id],
+  );
+  const { rows: cvRows } = await db.query(
+    'SELECT status_ekstraksi, terverifikasi, skills_mentah, riwayat_kerja FROM cv_data WHERE kandidat_id = $1',
+    [kandidatId],
+  );
+  const { rows: ujian } = await db.query('SELECT lowongan_tes_id, skor_pencapaian FROM ujian_teknis WHERE kandidat_id = $1', [
+    kandidatId,
   ]);
 
   const cv = cvRows[0];

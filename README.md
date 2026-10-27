@@ -14,7 +14,7 @@ Dokumentasi: [arsitektur](docs/RECRUITMENT_ARCHITECTURE.md) · [API contract](do
 | 3 | Parser CV: ekstraksi teks PDF, parser AI Claude, verifikasi kutipan, sorotan, kata kunci sorot per lowongan | Sebagian (belum diuji dengan API sungguhan) |
 | 4 | Halaman kandidat: lowongan, lamaran + upload CV, tes pilihan ganda dengan integrity signals | Selesai |
 | 5 | Dashboard rekruter: lowongan, bank soal, tabel kandidat + grafik + CSV, verifikasi CV dengan sorotan, keputusan | Selesai |
-| 6 | Seeder data demo | Belum |
+| 6 | Seeder data demo: 2 lowongan, 7 pelamar dengan skenario berbeda | Selesai |
 
 ## Menjalankan di komputer sendiri
 
@@ -71,6 +71,15 @@ npm run dev
 
 Buka http://localhost:5173. Frontend memanggil backend di `http://localhost:3000`; jika berbeda, salin `frontend/.env.example` menjadi `frontend/.env.local` dan ubah `VITE_API_URL`.
 
+Cara tercepat mencoba: isi data demo, lalu masuk sebagai `hr@demo.rekrut.id` dengan password `demo12345`.
+
+```bash
+cd backend
+npm run seed:demo
+```
+
+Seeder membuat lowongan **Kepala Toko** (5 pelamar: skor tinggi tapi sering keluar halaman, skor sedang yang sudah dicek HR, fresh graduate, CV hasil scan, pengalaman tanpa tanggal) dan **Kasir Outlet** (2 pelamar). Hanya akun `@demo.rekrut.id` yang disentuh; menjalankannya lagi menghapus dan membuat ulang data demo saja. Semua orang dan perusahaan di dalamnya fiktif, dan hasil baca CV-nya berlabel "contoh" karena ditulis tangan, bukan dibaca AI.
+
 Cara mencoba dari nol:
 
 1. Buat akun dengan peran **Rekruter**, lalu buat lowongan, isi soal tiap tes, dan buka lowongannya.
@@ -80,8 +89,8 @@ Cara mencoba dari nol:
 ## Test
 
 ```bash
-npm test                  # 98 unit test (scoring engine + parser CV, tanpa database dan tanpa API)
-npm run test:integration  # 79 test endpoint ke PostgreSQL sungguhan
+npm test                  # 99 unit test (scoring engine + parser CV, tanpa database dan tanpa API)
+npm run test:integration  # 89 test endpoint ke PostgreSQL sungguhan
 npm run test:all          # keduanya
 npm run lint
 ```
@@ -94,7 +103,7 @@ Frontend:
 
 ```bash
 cd frontend
-npm test       # 42 test: logika ujian, sorotan kata kunci, tabel kandidat, ekspor CSV, form lowongan/soal/riwayat
+npm test       # 48 test: logika ujian, sorotan kata kunci, tabel kandidat, ekspor CSV, form lowongan/soal/riwayat
 npm run lint
 npm run build
 ```
@@ -137,10 +146,13 @@ backend/
     storage/             storage disk lokal + signed URL
     scoring/             fungsi murni: skor kandidat, validasi, penilaian soal
     cv/                  PDF → teks, alur parser, verifikasi kutipan
+    demo/                data demo (fiktif), PDF CV demo, logika seeder
       ai/                prompt, skema output, klien Claude Messages API
   scripts/
     buat-pdf-contoh.py   membuat ulang PDF contoh untuk test (butuh reportlab)
     server-ai-palsu.js   backend dengan parser AI palsu, khusus uji e2e (menolak jalan di produksi)
+    seed-demo.js         isi data demo (npm run seed:demo)
+    buat-cv-demo.py      membuat ulang PDF CV demo (butuh reportlab)
   test/
     *.test.js            unit test scoring engine dan parser CV
     fixtures/cv/         contoh teks CV (fiktif)

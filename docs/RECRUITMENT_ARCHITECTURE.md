@@ -133,7 +133,7 @@ Semua perhitungan (total bulan, jumlah perusahaan, pencocokan skill dengan lowon
 
 ## 7. Fitur Pendukung Portofolio
 - **Client-Side Export:** Ekspor CSV dibuat sepenuhnya di browser tanpa library (pemisah titik koma + BOM agar terbuka rapi di Excel berbahasa Indonesia). Sel yang diawali `=` `+` `-` `@` diberi kutip tunggal supaya tidak dijalankan sebagai rumus. XLSX tidak dibuat karena CSV sudah mencukupi dan library XLSX menambah ukuran serta risiko dependensi.
-- **Dummy Data Seeder:** Skrip Node.js untuk menyuntikkan data fiktif, termasuk variasi skor teknis tinggi tetapi Integrity Signals buruk, fresh graduate tanpa riwayat kerja, CV dengan pengalaman tanpa tanggal, dan CV dengan ekstraksi gagal, untuk keperluan demonstrasi portofolio.
+- **Dummy Data Seeder:** `npm run seed:demo` menyuntikkan data fiktif, termasuk variasi skor teknis tinggi tetapi Integrity Signals buruk, fresh graduate tanpa riwayat kerja, CV dengan pengalaman tanpa tanggal, dan CV dengan ekstraksi gagal. Data dibuat lewat API aplikasi sendiri, bukan INSERT langsung, supaya skor dihitung oleh kode yang sama dengan pengguna asli. Dua pengecualian yang disengaja: waktu mulai tes dimundurkan beberapa menit agar durasi tes realistis, dan sumber hasil baca CV ditandai `contoh`. Seeder hanya menyentuh akun berdomain `demo.rekrut.id`.
 
 ## 8. Bank Soal (Ujian Pilihan Ganda)
 Soal adalah data, bukan kode. Rekruter (termasuk calon klien yang mencoba demo) bisa membuat, mengubah, dan mengurutkan soal sendiri tanpa menyentuh kode.

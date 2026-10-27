@@ -44,7 +44,13 @@ describe('2.2 Skor CV', () => {
   test('2 dari 3 skill wajib → 66,67', () => {
     const hasil = hitungSkorCv(['React', 'JavaScript', 'Git'], ['react', 'js']);
     kiraKira(hasil.skor, 200 / 3);
-    assert.deepEqual(hasil.tidakDitemukan, ['git']);
+    assert.deepEqual(hasil.tidakDitemukan, ['Git']);
+  });
+
+  test('skill dilaporkan dengan ejaan lowongan, bukan bentuk ternormalisasi', () => {
+    const hasil = hitungSkorCv(['Manajemen Stok', ' Microsoft Excel '], ['manajemen  stok', 'MS Excel']);
+    assert.deepEqual(hasil.ditemukan, ['Manajemen Stok', 'Microsoft Excel']);
+    assert.deepEqual(hasil.tidakDitemukan, []);
   });
 
   test('skill wajib kosong ditolak, bukan dibagi 0', () => {

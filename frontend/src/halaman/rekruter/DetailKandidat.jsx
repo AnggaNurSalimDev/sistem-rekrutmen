@@ -253,6 +253,12 @@ export default function DetailKandidat() {
                 </>
               )}
             </p>
+            {cv.sumber === 'contoh' && (
+              <p className="catatan-contoh">
+                Data demo: hasil baca CV ini contoh yang ditulis tangan, bukan hasil AI sungguhan. Sorotan dan skornya tetap dihitung oleh
+                sistem yang sama.
+              </p>
+            )}
             {!cv.terverifikasi && cv.alasanTinjau?.length > 0 && (
               <ul className="daftar-flag">
                 {cv.alasanTinjau.map((a) => (

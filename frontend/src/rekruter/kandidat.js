@@ -49,6 +49,7 @@ export function labelCv(k) {
   if (cv.statusEkstraksi === 'gagal') return 'Tidak terbaca';
   if (cv.statusEkstraksi === 'menunggu') return 'Belum dibaca';
   if (cv.statusEkstraksi === 'perlu_tinjau') return 'Perlu dicek';
+  if (cv.sumber === 'contoh') return 'Contoh, belum dicek';
   return 'Belum dicek';
 }
 

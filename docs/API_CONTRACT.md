@@ -292,7 +292,7 @@ Body:
   "skor": { "status": "lengkap | belum_lengkap | galat", "sementara": true,
             "komponen": { "cv": 100, "tenure": 50, "tes": 60, "anggaran": 100, "waktu": 100 },
             "flags": ["lama_kerja_tidak_disebut"] },
-  "cv": { "statusEkstraksi": "menunggu | berhasil | perlu_tinjau | gagal", "terverifikasi": false, "sumber": "ai | manual | null" },
+  "cv": { "statusEkstraksi": "menunggu | berhasil | perlu_tinjau | gagal", "terverifikasi": false, "sumber": "ai | manual | contoh | null" },
   "integritas": { "statusKamera": "granted", "jumlahKeluarFokus": 2, "totalDetikKeluarFokus": 14, "dibukaUlang": 1 },
   "ujian": [{ "tesId": "uuid", "skor": 50, "durasiDetik": 412 }]
 }
@@ -303,7 +303,7 @@ Body:
 Semua `BarisKandidat`, ditambah:
 - `lowongan`: `{ id, posisi, kataKunciSorot, skillWajib, skillOpsional, budgetMaksimal, kebutuhanWaktu }`
 - `rincianSkor`: hasil lengkap scoring engine (komponen, flags, detail per komponen)
-- `cv`: `{ statusEkstraksi, sumber, terverifikasi, diverifikasiPada, alasanTinjau, teks, sorotan: [{awal, akhir, kategori, label}], skills, riwayatKerja, rincianAi, urlPdf }`. `urlPdf` berlaku 5 menit.
+- `cv`: `{ statusEkstraksi, sumber, terverifikasi, diverifikasiPada, alasanTinjau, teks, sorotan: [{awal, akhir, kategori, label}], skills, riwayatKerja, rincianAi, urlPdf }`. `urlPdf` berlaku 5 menit. `sumber = contoh` hanya ada di data demo: hasil baca CV ditulis tangan, bukan dari AI; dashboard wajib memberi label.
 - `tes`: `[{ id, jenisTes, targetSkor, batasBawah, bobot, hasil: { skor, durasiDetik, dikirimPada } | null, jawaban: [{ soalId, pertanyaan, opsi, kunciOpsiId, opsiDipilih, benar }] }]`
 - `integritasLengkap`: `{ statusKamera, jumlahKeluarFokus, totalDetikKeluarFokus, log }` atau `null`
 

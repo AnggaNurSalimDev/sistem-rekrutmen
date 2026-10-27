@@ -80,12 +80,12 @@
 - [x] 5.10 Uji ujung ke ujung alur rekruter (`frontend/e2e/alur-rekruter.mjs`) dengan parser AI palsu (`backend/scripts/server-ai-palsu.js`): buat lowongan → bank soal → buka → tabel, filter, CSV → sorotan + kata kunci → konfirmasi CV → isi CV manual → keputusan → tampilan HP.
 
 # 7. Tahap 6 — Dummy Data Seeder
-- [ ] 6.1 Pembuatan skrip injeksi database (termasuk akun rekruter dan kandidat demo).
-- [ ] 6.2 Simulasi variasi data:
+- [x] 6.1 Pembuatan skrip injeksi database (termasuk akun rekruter dan kandidat demo). *Selesai: `npm run seed:demo`. Data dibuat lewat API aplikasi sendiri (server berjalan di dalam proses seeder), jadi skor, verifikasi kutipan, penilaian soal, dan log integritas dihitung kode yang sama dengan pengguna asli. Hanya menyentuh akun `@demo.rekrut.id`; aman dijalankan berulang.*
+- [x] 6.2 Simulasi variasi data (lowongan Kepala Toko, ditambah lowongan Kasir Outlet dengan satu pelamar belum tes dan satu ditolak):
   - Kandidat A: skor tinggi, Out of Focus masif.
   - Kandidat B: skor sedang, clean.
   - Kandidat C: fresh graduate tanpa riwayat kerja.
   - Kandidat D: ekstraksi CV gagal (menunggu tinjauan manual).
   - Kandidat E: pengalaman kerja tanpa tanggal (flag `lama_kerja_tidak_disebut`).
-  - Hasil ekstraksi di data demo diberi label "contoh hasil" jika tidak benar-benar dihasilkan AI.
-- [ ] 6.3 Set soal contoh pilihan ganda untuk setiap tes demo, beserta jawaban kandidat A–D yang konsisten dengan skor mereka.
+  - Hasil ekstraksi di data demo diberi label "contoh hasil" jika tidak benar-benar dihasilkan AI. *Disimpan dengan `sumber = contoh` (migrasi 007); dashboard menampilkan catatan "Data demo: … bukan hasil AI sungguhan".*
+- [x] 6.3 Set soal contoh pilihan ganda untuk setiap tes demo, beserta jawaban kandidat A–D yang konsisten dengan skor mereka. *Dicek oleh test integrasi `demo.test.js`: skor tiap tes = jumlah jawaban benar per soal.*

@@ -93,6 +93,7 @@ describe('tabel kandidat', () => {
     expect(labelCv(k({ cv: { statusEkstraksi: 'menunggu' } }))).toBe('Belum dibaca');
     expect(labelCv(k({ cv: { terverifikasi: true, sumber: 'manual' } }))).toBe('Diisi HR');
     expect(perluVerifikasi(k({ cv: null }))).toBe(true);
+    expect(labelCv(k({ cv: { statusEkstraksi: 'berhasil', sumber: 'contoh', terverifikasi: false } }))).toBe('Contoh, belum dicek');
   });
 
   it('sebaran skor: 100 masuk kelompok terakhir, tanpa skor dihitung terpisah', () => {

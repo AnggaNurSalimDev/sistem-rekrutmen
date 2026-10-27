@@ -1,5 +1,5 @@
 import { pastikan } from './errors.js';
-import { normalisasiDaftarSkill } from './skills.js';
+import { normalisasiDaftarSkill, normalisasiSkill } from './skills.js';
 import { clamp } from './util.js';
 
 /**
@@ -11,11 +11,18 @@ export function hitungSkorCv(skillWajib, skillKandidat) {
   pastikan(wajib.size >= 1, 'Lowongan wajib punya minimal 1 skill wajib', 'skillWajib');
 
   const dimiliki = normalisasiDaftarSkill(skillKandidat);
+  // Pencocokan memakai bentuk ternormalisasi ("manajemenstok"), tapi yang
+  // dilaporkan ejaan lowongan ("Manajemen Stok") supaya bisa dibaca HR.
+  const ejaan = new Map();
+  for (const s of skillWajib) {
+    const n = normalisasiSkill(s);
+    if (n !== null && !ejaan.has(n)) ejaan.set(n, s.trim());
+  }
 
   const ditemukan = [];
   const tidakDitemukan = [];
   for (const skill of wajib) {
-    (dimiliki.has(skill) ? ditemukan : tidakDitemukan).push(skill);
+    (dimiliki.has(skill) ? ditemukan : tidakDitemukan).push(ejaan.get(skill) ?? skill);
   }
 
   return {

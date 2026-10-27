@@ -1693,3 +1693,11 @@ th.angka .tombol-urut {
   font-weight: 700;
   margin-top: 10px !important;
 }
+.catatan-contoh {
+  margin: 6px 0 10px;
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  border: 1.5px dashed var(--kuning-gelap);
+  border-radius: var(--radius-kecil);
+  background: #fff8e1;
+}
