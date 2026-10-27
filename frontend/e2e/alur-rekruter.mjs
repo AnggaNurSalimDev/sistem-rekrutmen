@@ -218,8 +218,12 @@ async function main() {
   await p.getByText('Lihat perhitungannya').click();
   await p.getByText(/^Nilai Tes = 60 \+ 40 = 100$/).waitFor();
   await foto(p, '04-detail-kandidat');
+  // Keputusan terkunci selama CV belum dicek
+  assert.equal(await p.getByRole('button', { name: 'Terima' }).isDisabled(), true, 'Terima aktif padahal CV belum dicek');
+  await p.getByText('Terima dan Tolak aktif setelah CV dicek').waitFor();
   await p.getByRole('button', { name: 'Data CV sudah benar' }).click();
   await p.getByText('Data CV dikonfirmasi.').waitFor();
+  assert.equal(await p.getByRole('button', { name: 'Terima' }).isDisabled(), false);
   assert.equal(await p.locator('.skor-besar .stempel').count(), 0, 'label sementara masih ada setelah konfirmasi');
   await p.getByText('Sudah dicek HR', { exact: true }).waitFor();
 

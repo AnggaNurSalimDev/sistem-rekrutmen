@@ -95,6 +95,8 @@ export default function DetailKandidat() {
   const ejaan = Object.fromEntries(k.lowongan.skillWajib.map((s) => [s.toLowerCase(), s]));
   const eja = (daftar) => daftar.map((s) => ejaan[s.toLowerCase()] ?? s).join(', ');
   const sudahDiputuskan = ['diterima', 'ditolak'].includes(k.statusAplikasi);
+  // Aturan sama dengan API: keputusan hanya dari skor yang sudah pasti.
+  const belumDicek = perluVerifikasi(k);
 
   return (
     <>
@@ -118,10 +120,10 @@ export default function DetailKandidat() {
             </button>
           ) : (
             <>
-              <button type="button" className="tombol" disabled={sibuk} onClick={() => putuskan('diterima')}>
+              <button type="button" className="tombol" disabled={sibuk || belumDicek} aria-describedby={belumDicek ? 'alasan-keputusan' : undefined} onClick={() => putuskan('diterima')}>
                 Terima
               </button>
-              <button type="button" className="tombol kedua" disabled={sibuk} onClick={() => putuskan('ditolak')}>
+              <button type="button" className="tombol kedua" disabled={sibuk || belumDicek} aria-describedby={belumDicek ? 'alasan-keputusan' : undefined} onClick={() => putuskan('ditolak')}>
                 Tolak
               </button>
             </>
@@ -129,6 +131,11 @@ export default function DetailKandidat() {
         </div>
       </div>
 
+      {belumDicek && !sudahDiputuskan && (
+        <p className="alasan-keputusan" id="alasan-keputusan">
+          Terima dan Tolak aktif setelah CV dicek: skor kandidat ini masih sementara. <a href="#judul-cv">Cek CV di bawah</a>.
+        </p>
+      )}
       {pesan && (
         <Pesan jenis="sukses">
           <p>{pesan}</p>

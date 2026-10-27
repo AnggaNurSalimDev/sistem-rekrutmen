@@ -270,6 +270,16 @@ export function ruteKandidat({ pool, storage, requireAuth }) {
     const { keputusan } = parse(skemaKeputusan, req.body);
     const status = await denganTransaksi(pool, async (db) => {
       const k = await ambilKandidatMilik(db, req.params.id, req.user.id, { kunci: true });
+      // Keputusan hanya boleh diambil dari skor yang sudah pasti: CV wajib sudah dicek HR
+      // (dikonfirmasi, dikoreksi, atau diisi manual). Membatalkan keputusan selalu boleh.
+      if (keputusan !== null) {
+        const { rows } = await db.query('SELECT terverifikasi FROM cv_data WHERE kandidat_id = $1', [k.id]);
+        if (rows[0]?.terverifikasi !== true) {
+          throw konflik(
+            'CV kandidat ini belum dicek HR, jadi skornya masih sementara. Konfirmasi, koreksi, atau isi data CV dulu sebelum menerima atau menolak.',
+          );
+        }
+      }
       const baru = keputusan ?? (await statusProgres(db, k.id, k.lowongan_id));
       await db.query('UPDATE kandidat SET status_aplikasi = $1 WHERE id = $2', [baru, k.id]);
       return baru;

@@ -151,6 +151,7 @@ describe('Tahap 5: data kandidat untuk rekruter', { skip: ALASAN_LEWATI }, () =>
 
   test('keputusan diterima/ditolak terlihat oleh pelamar; dibatalkan → kembali ke status progres', async () => {
     const p = await pelamar();
+    await kirim('post', `/kandidat/${p.id}/cv/konfirmasi`, rekruter);
     const r = await kirim('patch', `/kandidat/${p.id}/status`, rekruter, { keputusan: 'ditolak' });
     assert.equal(r.body.data.statusAplikasi, 'ditolak');
     const dilihat = await request(api.app).get(`/lamaran/${p.id}`).set(p.akun.auth);
@@ -164,6 +165,24 @@ describe('Tahap 5: data kandidat untuk rekruter', { skip: ALASAN_LEWATI }, () =>
     const batal = await kirim('patch', `/kandidat/${p.id}/status`, rekruter, { keputusan: null });
     assert.equal(batal.body.data.statusAplikasi, 'selesai');
     assert.equal((await kirim('patch', `/kandidat/${p.id}/status`, rekruter, { keputusan: 'lulus' })).status, 400);
+  });
+
+  test('terima/tolak ditolak selama CV belum dicek HR; membatalkan tetap boleh', async () => {
+    const p = await pelamar();
+    for (const keputusan of ['diterima', 'ditolak']) {
+      const res = await kirim('patch', `/kandidat/${p.id}/status`, rekruter, { keputusan });
+      assert.equal(res.status, 409, keputusan);
+      assert.match(res.body.error.pesan, /belum dicek HR/);
+    }
+    const { rows } = await api.pool.query('SELECT status_aplikasi FROM kandidat WHERE id = $1', [p.id]);
+    assert.equal(rows[0].status_aplikasi, 'dilamar');
+    assert.equal((await kirim('patch', `/kandidat/${p.id}/status`, rekruter, { keputusan: null })).status, 200);
+
+    // CV scan (tidak terbaca): baru bisa diputuskan setelah HR mengisi datanya manual.
+    const scan = await pelamar({ pdf: PDF_SCAN });
+    assert.equal((await kirim('patch', `/kandidat/${scan.id}/status`, rekruter, { keputusan: 'ditolak' })).status, 409);
+    await kirim('put', `/kandidat/${scan.id}/cv`, rekruter, { skills: ['React'], riwayatKerja: [] });
+    assert.equal((await kirim('patch', `/kandidat/${scan.id}/status`, rekruter, { keputusan: 'ditolak' })).status, 200);
   });
 
   test('mengubah budget lowongan menghitung ulang skor semua pelamar', async () => {

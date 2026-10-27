@@ -1701,3 +1701,9 @@ th.angka .tombol-urut {
   border-radius: var(--radius-kecil);
   background: #fff8e1;
 }
+.alasan-keputusan {
+  margin: -8px 0 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--kuning-gelap);
+}

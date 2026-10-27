@@ -205,6 +205,7 @@ docs/
 
 **Dashboard rekruter**
 - **Skor yang belum pasti selalu terlihat berbeda.** Selama CV belum dicek HR, skor diberi stempel kuning "Sementara" di tabel, detail, dan kolom CSV sendiri.
+- **Keputusan hanya dari skor yang sudah pasti.** Tombol Terima/Tolak terkunci (dan API menolak dengan 409) selama CV kandidat belum dicek HR.
 - **Antrean verifikasi tanpa halaman terpisah.** Filter "Perlu dicek HR" di tabel, dan setelah konfirmasi ada tautan ke CV berikutnya yang belum dicek (skor tertinggi dulu).
 - **Dua lapis sorotan di CV**: temuan AI (garis bawah biru, hanya yang kutipannya terbukti) dan kata kunci rekruter (stabilo kuning, dicari di browser, kata utuh, tanpa beda huruf besar). Jumlah kemunculan tiap kata kunci ditampilkan, termasuk "tidak ada".
 - **Data integritas ditampilkan sebagai petunjuk**, dengan kalimat bahwa itu bukan bukti kecurangan.

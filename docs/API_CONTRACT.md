@@ -328,7 +328,8 @@ Koreksi atau isi manual data CV. Data dari HR menggantikan hasil parser (`sumber
 
 ### `PATCH /kandidat/:id/status`
 Body: `{ "keputusan": "diterima" | "ditolak" | null }`. `null` membatalkan keputusan; status kembali ke progres tes (`dilamar`/`ujian`/`selesai`). Keputusan tidak tertimpa walau pelamar masih mengirim tes.
-- 200 `{ "data": { "statusAplikasi": "ditolak" } }` · 400
+- **Menerima atau menolak hanya boleh setelah CV dicek HR** (`cv.terverifikasi = true`: dikonfirmasi, dikoreksi, atau diisi manual), supaya keputusan tidak diambil dari skor sementara. Membatalkan keputusan (`null`) selalu boleh.
+- 200 `{ "data": { "statusAplikasi": "ditolak" } }` · 400 · 409 CV belum dicek HR
 
 Mengubah budget atau skill lowongan (`PUT /lowongan/:id`) menghitung ulang skor semua pelamarnya.
 
