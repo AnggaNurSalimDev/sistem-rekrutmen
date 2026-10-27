@@ -71,7 +71,11 @@ npm run dev
 
 Buka http://localhost:5173. Frontend memanggil backend di `http://localhost:3000`; jika berbeda, salin `frontend/.env.example` menjadi `frontend/.env.local` dan ubah `VITE_API_URL`.
 
-Untuk mencoba alur pelamar, perlu satu lowongan berstatus buka beserta soalnya. Dashboard rekruter belum ada (Tahap 5), jadi untuk sementara buat lewat API; skrip uji ujung ke ujung di bawah juga membuatnya otomatis.
+Cara mencoba dari nol:
+
+1. Buat akun dengan peran **Rekruter**, lalu buat lowongan, isi soal tiap tes, dan buka lowongannya.
+2. Keluar, buat akun kedua dengan peran **Pelamar** (pakai email lain), lalu lamar dan kerjakan tesnya.
+3. Masuk lagi sebagai rekruter dan buka lowongan itu untuk melihat tabel kandidat, skor, dan CV.
 
 ## Test
 
