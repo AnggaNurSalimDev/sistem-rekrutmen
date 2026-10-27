@@ -1645,3 +1645,51 @@ th.angka .tombol-urut {
 .jawaban .salah .tanda {
   color: var(--merah);
 }
+
+.cara-hitung {
+  margin-top: 20px;
+  padding: 16px 18px;
+  background: var(--permukaan);
+  border: 1px solid var(--garis);
+  border-left: 5px solid var(--indigo);
+  border-radius: var(--radius-kecil);
+  font-size: 0.9375rem;
+}
+.cara-hitung h3 {
+  margin-bottom: 8px;
+}
+.cara-hitung ol {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 10px;
+}
+.cara-hitung ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  color: var(--tinta-lembut);
+}
+.isian input[readonly] {
+  background: var(--latar);
+  color: var(--tinta-lembut);
+}
+.rumus-skor {
+  margin-top: 12px;
+  font-size: 0.875rem;
+}
+.rumus-skor summary {
+  cursor: pointer;
+  color: var(--indigo);
+  font-weight: 700;
+}
+.rumus-skor ul {
+  margin: 4px 0 6px;
+  padding-left: 18px;
+}
+.rumus-skor p {
+  margin-top: 4px;
+}
+.judul-rumus {
+  font-weight: 700;
+  margin-top: 10px !important;
+}

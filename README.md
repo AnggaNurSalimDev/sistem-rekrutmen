@@ -196,6 +196,8 @@ docs/
 - **Antrean verifikasi tanpa halaman terpisah.** Filter "Perlu dicek HR" di tabel, dan setelah konfirmasi ada tautan ke CV berikutnya yang belum dicek (skor tertinggi dulu).
 - **Dua lapis sorotan di CV**: temuan AI (garis bawah biru, hanya yang kutipannya terbukti) dan kata kunci rekruter (stabilo kuning, dicari di browser, kata utuh, tanpa beda huruf besar). Jumlah kemunculan tiap kata kunci ditampilkan, termasuk "tidak ada".
 - **Data integritas ditampilkan sebagai petunjuk**, dengan kalimat bahwa itu bukan bukti kecurangan.
+- **Bobot tes diatur rekruter, bobot skor akhir tetap.** Satu tes otomatis 100% (tidak bisa diubah); menambah atau menghapus tes membagi bobot rata lagi, lalu rekruter boleh mengubahnya selama jumlahnya 100%. Form menampilkan rumusnya dengan angka yang sedang diisi, dan halaman kandidat menampilkan perhitungan skornya langkah demi langkah. Lima bobot skor akhir (30/20/30/10/10) sama untuk semua lowongan supaya skor antarlowongan bisa dibandingkan.
+- **Setelah masuk, pengguna hanya diarahkan ke halaman milik perannya.** Alamat tujuan dari `?ke=` diabaikan jika milik peran lain, dan tombol Keluar pindah ke halaman publik dulu.
 - **CSV dibuat di browser** dengan pemisah titik koma dan BOM (Excel Indonesia), dan sel yang diawali `=` `+` `-` `@` dinetralkan karena nama pelamar bisa berisi rumus.
 
 **Keamanan**

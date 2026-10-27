@@ -90,17 +90,23 @@ async function main() {
   await p.getByLabel('Jadwal kerja yang dibutuhkan').fill('Senin–Jumat 09.00–17.00');
   await p.getByLabel('Skill wajib').fill('React, JavaScript, TypeScript');
   await p.getByLabel('Kata kunci yang disorot di CV (opsional)').fill('Tailwind, Universitas Padjadjaran');
+  // Satu tes: bobot terkunci 100%
+  assert.equal(await p.getByLabel('Bobot %').getAttribute('readonly'), '');
   await p.getByRole('button', { name: 'Tambah tes' }).click();
   await p.getByLabel('Nama tes').nth(1).fill('coding');
+  // Tambah tes → bobot dibagi rata otomatis
+  assert.equal(await p.getByLabel('Bobot %').nth(0).inputValue(), '50');
+  assert.equal(await p.getByLabel('Bobot %').nth(1).inputValue(), '50');
+  await p.getByLabel('Bobot %').nth(1).fill('30');
+  await p.getByText('Total bobot 80%').waitFor();
   await p.getByRole('button', { name: 'Simpan sebagai draf' }).click();
   await p.getByText('Periksa isian yang ditandai.').waitFor();
-  await p.getByText('Bobot lebih dari 0 sampai 100%.').waitFor();
-  await p.getByLabel('Bobot %').nth(1).fill('40');
-  await p.getByText('Jumlah bobot tes harus 100%, sekarang 140%.').waitFor({ state: 'detached' }).catch(() => {});
-  await p.getByRole('button', { name: 'Simpan sebagai draf' }).click();
-  await p.getByText('Jumlah bobot tes harus 100%, sekarang 140%.').waitFor();
+  await p.getByText('Jumlah bobot tes harus 100%, sekarang 80%.').waitFor();
   await p.getByLabel('Bobot %').nth(0).fill('60');
+  await p.getByLabel('Bobot %').nth(1).fill('40');
   await p.getByText('Total bobot 100%').waitFor();
+  await p.getByText('logika × 60% + coding × 40%').waitFor();
+  await p.getByText('nilai 60 → (60 − 40) ÷ (80 − 40) × 100 = 50').first().waitFor();
   await foto(p, '01-form-lowongan');
   await p.getByRole('button', { name: 'Simpan sebagai draf' }).click();
   await p.getByText('Lowongan dibuat sebagai draf').waitFor();
@@ -209,6 +215,8 @@ async function main() {
   await p.getByText('Skill wajib ditemukan: React, JavaScript. Tidak ditemukan: TypeScript.', { exact: true }).waitFor();
   await p.getByText('Jan 2022 sampai sekarang').waitFor();
   await p.getByText('Keluar halaman', { exact: true }).waitFor();
+  await p.getByText('Lihat perhitungannya').click();
+  await p.getByText(/^Nilai Tes = 60 \+ 40 = 100$/).waitFor();
   await foto(p, '04-detail-kandidat');
   await p.getByRole('button', { name: 'Data CV sudah benar' }).click();
   await p.getByText('Data CV dikonfirmasi.').waitFor();
@@ -248,6 +256,15 @@ async function main() {
   const lebarHalaman = await p.evaluate(() => document.documentElement.scrollWidth);
   assert.ok(lebarHalaman <= 390, `halaman melebar di HP: ${lebarHalaman}px`);
   await foto(p, '05-hp');
+
+  // 13. Keluar dari halaman rekruter lalu pelamar masuk: tidak boleh diarahkan ke halaman rekruter
+  await p.getByRole('button', { name: 'Keluar' }).click();
+  await p.goto(`${WEB}/masuk?ke=%2Frekruter`);
+  await p.getByLabel('Email').fill(rina.email);
+  await p.getByLabel('Password').fill('rahasia123');
+  await p.getByRole('button', { name: 'Masuk' }).click();
+  await p.getByRole('heading', { name: 'Lowongan yang sedang dibuka' }).waitFor();
+  assert.equal(await p.getByText('bukan untuk akun Anda').count(), 0);
 
   assert.deepEqual(galatHalaman, [], `Error JavaScript di halaman: ${galatHalaman.join(' | ')}`);
   await browser.close();

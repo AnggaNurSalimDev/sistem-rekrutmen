@@ -5,6 +5,9 @@ import { Isian } from '../../komponen/Isian.jsx';
 import { Memuat, Pesan } from '../../komponen/umum.jsx';
 import { dariLowongan, formBaru, keBody, tesKosong, totalBobot } from '../../rekruter/formLowongan.js';
 import { useData } from '../../rekruter/useData.js';
+import { angkaId, bagiRata, skorSatuTes } from '../../rekruter/rumus.js';
+import { KOMPONEN } from '../../rekruter/kandidat.js';
+import { angka } from '../../rekruter/formLowongan.js';
 
 /** /rekruter/lowongan/baru dan /rekruter/lowongan/:id/ubah */
 export default function FormLowongan() {
@@ -31,6 +34,15 @@ function IsiForm({ lowongan = null, awal }) {
     setIsian({ ...isian, tes: isian.tes.map((t, j) => (j === i ? { ...t, [kunci]: e.target.value } : t)) });
     // Pesan jumlah bobot dihitung ulang saat menyimpan; jangan biarkan pesan lama menyesatkan.
     if (galatField.tes) setGalatField({ ...galatField, tes: undefined });
+    setGalat(null);
+  };
+
+  // Tambah/hapus tes → bobot dibagi rata lagi (jumlah tetap tepat 100%). Rekruter bisa mengubahnya setelah itu.
+  const aturTes = (daftar) => {
+    const bobot = bagiRata(daftar.length);
+    setIsian({ ...isian, tes: daftar.map((t, i) => ({ ...t, bobot: String(bobot[i]) })) });
+    if (galatField.tes) setGalatField({ ...galatField, tes: undefined });
+    setGalat(null);
   };
 
   async function simpan(e) {
@@ -107,7 +119,9 @@ function IsiForm({ lowongan = null, awal }) {
             <p>Tes tidak bisa diubah karena lowongan ini sudah {lowongan.status === 'buka' ? 'dibuka' : 'ditutup'}. Ubah status ke draf dulu (hanya bisa jika belum ada pelamar).</p>
           </Pesan>
         )}
-        <p className="bantuan">Bobot dalam persen, jumlahnya harus 100%. Skor tes kandidat = target tercapai bernilai 100, di bawah batas bawah bernilai 0.</p>
+        <p className="bantuan">
+          Kalau ada lebih dari satu tes, bobot menentukan seberapa besar pengaruh tiap tes ke nilai Tes kandidat. Jumlahnya harus 100%. Satu tes saja otomatis 100%.
+        </p>
         {galatField.tes && <p className="galat-blok" role="alert">{galatField.tes}</p>}
         <fieldset className="daftar-isian-tes" disabled={!tesBisaDiubah}>
           <legend className="sr-only">Daftar tes</legend>
@@ -123,13 +137,19 @@ function IsiForm({ lowongan = null, awal }) {
                 {(p) => <input {...p} type="number" min={0} max={100} value={t.batasBawah} onChange={ubahTes(i, 'batasBawah')} />}
               </Isian>
               <Isian label="Bobot %" galat={galatField[`tes.${i}.bobot`]}>
-                {(p) => <input {...p} type="text" inputMode="decimal" value={t.bobot} onChange={ubahTes(i, 'bobot')} />}
+                {(p) =>
+                  isian.tes.length === 1 ? (
+                    <input {...p} type="text" value="100" readOnly title="Hanya satu tes, jadi bobotnya selalu 100%" />
+                  ) : (
+                    <input {...p} type="text" inputMode="decimal" value={t.bobot} onChange={ubahTes(i, 'bobot')} />
+                  )
+                }
               </Isian>
               {isian.tes.length > 1 && (
                 <button
                   type="button"
                   className="tombol-teks hapus-tes"
-                  onClick={() => setIsian({ ...isian, tes: isian.tes.filter((_, j) => j !== i) })}
+                  onClick={() => aturTes(isian.tes.filter((_, j) => j !== i))}
                   aria-label={`Hapus tes ${t.jenisTes || i + 1}`}
                 >
                   Hapus
@@ -138,16 +158,24 @@ function IsiForm({ lowongan = null, awal }) {
             </div>
           ))}
           <div className="kaki-tes">
-            {isian.tes.length < 10 && (
-              <button type="button" className="tombol kedua" onClick={() => setIsian({ ...isian, tes: [...isian.tes, tesKosong()] })}>
-                Tambah tes
-              </button>
-            )}
+            <div className="aksi-judul">
+              {isian.tes.length < 10 && (
+                <button type="button" className="tombol kedua" onClick={() => aturTes([...isian.tes, tesKosong()])}>
+                  Tambah tes
+                </button>
+              )}
+              {isian.tes.length > 1 && (
+                <button type="button" className="tombol-teks" onClick={() => aturTes(isian.tes)}>
+                  Bagi bobot rata
+                </button>
+              )}
+            </div>
             <span className={Math.abs(total - 100) > 0.1 ? 'total-bobot salah' : 'total-bobot'} aria-live="polite">
               Total bobot {String(total).replace('.', ',')}%
             </span>
           </div>
         </fieldset>
+        <CaraHitung tes={isian.tes} />
       </section>
 
       <div className="aksi-form">
@@ -157,5 +185,47 @@ function IsiForm({ lowongan = null, awal }) {
         <Link to={lowongan ? `/rekruter/lowongan/${lowongan.id}` : '/rekruter'}>Batal</Link>
       </div>
     </form>
+  );
+}
+
+/** Rumus skor dengan angka dari form, supaya rekruter tahu persis efek pengaturannya. */
+function CaraHitung({ tes }) {
+  const satu = tes.length === 1;
+  return (
+    <div className="cara-hitung" aria-live="polite">
+      <h3>Cara skor dihitung</h3>
+      <ol>
+        <li>
+          <b>Skor tiap tes (0–100).</b> Nilai sama atau di bawah batas bawah = 0, sama atau di atas target = 100. Di antaranya naik
+          rata: (nilai − batas bawah) ÷ (target − batas bawah) × 100.
+          <ul>
+            {tes.map((t, i) => {
+              const target = angka(t.targetSkor);
+              const bawah = angka(t.batasBawah);
+              const contoh = Math.round((target + bawah) / 2);
+              const skor = skorSatuTes(contoh, target, bawah);
+              return (
+                <li key={t.id ?? i}>
+                  {t.jenisTes || `Tes ${i + 1}`}:{' '}
+                  {skor === null
+                    ? 'isi target dan batas bawah (target harus lebih besar).'
+                    : `nilai ${contoh} → (${contoh} − ${bawah}) ÷ (${target} − ${bawah}) × 100 = ${angkaId(skor)}`}
+                </li>
+              );
+            })}
+          </ul>
+        </li>
+        <li>
+          <b>Nilai Tes kandidat</b> ={' '}
+          {satu
+            ? `skor ${tes[0].jenisTes || 'tes'} (satu-satunya tes, bobot 100%).`
+            : tes.map((t, i) => `${t.jenisTes || `Tes ${i + 1}`} × ${String(t.bobot || 0).replace('.', ',')}%`).join(' + ')}
+        </li>
+        <li>
+          <b>Skor akhir</b> = {KOMPONEN.map((k) => `${k.nama} × ${k.bobot}%`).join(' + ')}. Lima bobot ini tetap untuk semua lowongan
+          supaya skor antarlowongan bisa dibandingkan.
+        </li>
+      </ol>
+    </div>
   );
 }

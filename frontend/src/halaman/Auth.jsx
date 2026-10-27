@@ -3,12 +3,7 @@ import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { panggil } from '../api/klien.js';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { Pesan } from '../komponen/umum.jsx';
-
-/** Hanya izinkan tujuan di dalam aplikasi ini (cegah open redirect "?ke=https://..."). */
-function tujuanAman(ke, role) {
-  if (typeof ke === 'string' && ke.startsWith('/') && !ke.startsWith('//')) return ke;
-  return role === 'rekruter' ? '/rekruter' : '/';
-}
+import { tujuanSetelahMasuk } from '../auth/tujuan.js';
 
 function useFormAuth(endpoint) {
   const { masukDengan } = useAuth();
@@ -25,7 +20,7 @@ function useFormAuth(endpoint) {
     try {
       const hasil = await panggil(endpoint, { method: 'POST', body });
       masukDengan(hasil);
-      navigate(tujuanAman(cari.get('ke'), hasil.user.role), { replace: true });
+      navigate(tujuanSetelahMasuk(cari.get('ke'), hasil.user.role), { replace: true });
     } catch (err) {
       setGalat(err.message);
       setGalatField(err.perField ?? {});
@@ -40,7 +35,7 @@ export function Masuk() {
   const id = useId();
   const { kirim, galat, mengirim, ke } = useFormAuth('/auth/login');
   const [isian, setIsian] = useState({ email: '', password: '' });
-  if (user) return <Navigate to={tujuanAman(ke, user.role)} replace />;
+  if (user) return <Navigate to={tujuanSetelahMasuk(ke, user.role)} replace />;
 
   return (
     <div className="form-sempit">
@@ -78,7 +73,7 @@ export function Daftar() {
   const id = useId();
   const { kirim, galat, galatField, mengirim, ke } = useFormAuth('/auth/register');
   const [isian, setIsian] = useState({ nama: '', email: '', password: '', role: 'kandidat' });
-  if (user) return <Navigate to={tujuanAman(ke, user.role)} replace />;
+  if (user) return <Navigate to={tujuanSetelahMasuk(ke, user.role)} replace />;
 
   const ubah = (k) => (e) => setIsian({ ...isian, [k]: e.target.value });
 

@@ -91,7 +91,8 @@ export function keBody(isian, { sertakanTes = true } = {}) {
       const jenisTes = t.jenisTes.trim();
       const targetSkor = angka(t.targetSkor);
       const batasBawah = angka(t.batasBawah);
-      const bobotPersen = angka(t.bobot);
+      // Satu tes selalu 100%, apa pun isi kolomnya (kolomnya hanya-baca di form).
+      const bobotPersen = isian.tes.length === 1 ? 100 : angka(t.bobot);
       if (!jenisTes) galat[`tes.${i}.jenisTes`] = 'Isi nama tes.';
       if (!(targetSkor >= 0 && targetSkor <= 100)) galat[`tes.${i}.targetSkor`] = 'Target 0–100.';
       if (!(batasBawah >= 0 && batasBawah <= 100)) galat[`tes.${i}.batasBawah`] = 'Batas bawah 0–100.';
@@ -110,7 +111,7 @@ export function keBody(isian, { sertakanTes = true } = {}) {
     const nama = tes.map((t) => t.jenisTes.toLowerCase()).filter(Boolean);
     const ganda = nama.find((n, i) => nama.indexOf(n) !== i);
     if (ganda) galat.tes = `Nama tes "${ganda}" dipakai lebih dari sekali.`;
-    const total = isian.tes.reduce((t, x) => t + (angka(x.bobot) || 0), 0);
+    const total = tes.reduce((t, x) => t + (x.bobot * 100 || 0), 0);
     if (tes.length > 0 && Math.abs(total - 100) > TOLERANSI_PERSEN) {
       galat.tes = `Jumlah bobot tes harus 100%, sekarang ${Math.round(total * 10) / 10}%.`;
     }
@@ -121,5 +122,6 @@ export function keBody(isian, { sertakanTes = true } = {}) {
 }
 
 export function totalBobot(tes) {
+  if (tes.length === 1) return 100;
   return Math.round(tes.reduce((t, x) => t + (angka(x.bobot) || 0), 0) * 10) / 10;
 }

@@ -1,8 +1,17 @@
-import { Link, NavLink, Navigate, useLocation } from 'react-router-dom';
+import { Link, NavLink, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { berandaPeran } from '../auth/tujuan.js';
 import { useAuth } from '../auth/AuthContext.jsx';
 
 export function Kepala({ lebar = false }) {
   const { user, keluar } = useAuth();
+  const navigate = useNavigate();
+  // Pindah ke halaman publik dulu, baru keluar. Kalau keluar dulu, halaman
+  // berlogin yang sedang terbuka akan mengirim ke /masuk?ke=<halaman itu>,
+  // dan orang berikutnya yang masuk ikut diarahkan ke sana.
+  const keluarSekarang = () => {
+    navigate('/', { replace: true });
+    keluar();
+  };
   return (
     <header className="kepala">
       <div className={lebar ? 'wadah lebar' : 'wadah'}>
@@ -18,7 +27,7 @@ export function Kepala({ lebar = false }) {
           {user?.role === 'kandidat' && <NavLink to="/lamaran">Lamaran saya</NavLink>}
           {user?.role === 'rekruter' && <NavLink to="/rekruter">Lowongan saya</NavLink>}
           {user ? (
-            <button type="button" className="tombol-teks" onClick={keluar}>
+            <button type="button" className="tombol-teks" onClick={keluarSekarang}>
               Keluar
             </button>
           ) : (
@@ -57,7 +66,8 @@ export function Wajib({ peran, children }) {
     return (
       <Pesan jenis="galat" judul="Halaman ini bukan untuk akun Anda">
         <p>
-          Anda masuk sebagai {user.role}. <Link to="/">Kembali ke daftar lowongan</Link>.
+          Anda masuk sebagai {user.role === 'rekruter' ? 'rekruter' : 'pelamar'}.{' '}
+          <Link to={berandaPeran(user.role)}>{user.role === 'rekruter' ? 'Ke lowongan Anda' : 'Ke daftar lowongan'}</Link>.
         </p>
       </Pesan>
     );

@@ -168,7 +168,9 @@ describe('form lowongan', () => {
   });
 
   it('menolak bobot tidak 100%, target ≤ batas bawah, nama tes dobel', () => {
-    expect(keBody(isi({ tes: [{ jenisTes: 'a', targetSkor: '80', batasBawah: '40', bobot: '90' }] })).galat.tes).toMatch(/100%/);
+    expect(keBody(isi({ tes: [{ jenisTes: 'a', targetSkor: '80', batasBawah: '40', bobot: '60' }, { jenisTes: 'b', targetSkor: '80', batasBawah: '40', bobot: '30' }] })).galat.tes).toMatch(/100%/);
+    // Satu tes selalu 100%, isi kolom bobot diabaikan.
+    expect(keBody(isi({ tes: [{ jenisTes: 'a', targetSkor: '80', batasBawah: '40', bobot: '7' }] })).body.tes[0].bobot).toBe(1);
     expect(keBody(isi({ tes: [{ jenisTes: 'a', targetSkor: '40', batasBawah: '40', bobot: '100' }] })).galat['tes.0.batasBawah']).toBeTruthy();
     const dobel = keBody(isi({ tes: [
       { jenisTes: 'Logika', targetSkor: '80', batasBawah: '40', bobot: '50' },
@@ -249,5 +251,60 @@ describe('koreksi riwayat kerja', () => {
     expect(validasiRiwayat([b({ perusahaan: ' ' })], sekarang).galat[0]).toMatch(/nama/);
     expect(validasiRiwayat([b({ masihBekerja: true })], sekarang).hasil[0].selesai).toBeNull();
     expect(validasiRiwayat([b({ tanpaTanggal: true, mulai: 'x' })], sekarang).hasil[0]).toEqual({ perusahaan: 'Toko', mulai: null, selesai: null });
+  });
+});
+
+import { bolehDibuka, tujuanSetelahMasuk } from '../src/auth/tujuan.js';
+
+describe('tujuan setelah masuk', () => {
+  it('halaman peran lain dari ?ke= diabaikan, diganti beranda peran sendiri', () => {
+    expect(tujuanSetelahMasuk('/rekruter', 'kandidat')).toBe('/');
+    expect(tujuanSetelahMasuk('/rekruter/lowongan/abc', 'kandidat')).toBe('/');
+    expect(tujuanSetelahMasuk('/lamaran', 'rekruter')).toBe('/rekruter');
+    expect(tujuanSetelahMasuk('/lamaran/1/tes/2', 'rekruter')).toBe('/rekruter');
+  });
+
+  it('halaman yang boleh tetap dipakai', () => {
+    expect(tujuanSetelahMasuk('/lamaran', 'kandidat')).toBe('/lamaran');
+    expect(tujuanSetelahMasuk('/lowongan/123', 'kandidat')).toBe('/lowongan/123');
+    expect(tujuanSetelahMasuk('/rekruter/kandidat/9', 'rekruter')).toBe('/rekruter/kandidat/9');
+    expect(bolehDibuka('/rekruterx', 'kandidat')).toBe(true); // bukan area rekruter
+  });
+
+  it('alamat luar dan kosong ditolak', () => {
+    expect(tujuanSetelahMasuk('https://jahat.id', 'kandidat')).toBe('/');
+    expect(tujuanSetelahMasuk('//jahat.id', 'rekruter')).toBe('/rekruter');
+    expect(tujuanSetelahMasuk('/\\jahat.id', 'kandidat')).toBe('/');
+    expect(tujuanSetelahMasuk(null, 'rekruter')).toBe('/rekruter');
+  });
+});
+
+import { bagiRata, rincianKomponenTes, rincianSkorAkhir, skorSatuTes } from '../src/rekruter/rumus.js';
+
+describe('rumus skor yang ditampilkan', () => {
+  it('bagi rata selalu berjumlah tepat 100', () => {
+    for (let n = 1; n <= 10; n++) {
+      const b = bagiRata(n);
+      expect(b).toHaveLength(n);
+      expect(Math.round(b.reduce((t, x) => t + x, 0) * 10) / 10).toBe(100);
+    }
+    expect(bagiRata(3)).toEqual([33.4, 33.3, 33.3]);
+    expect(bagiRata(1)).toEqual([100]);
+    expect(() => bagiRata(0)).toThrow();
+  });
+
+  it('skor satu tes sama dengan scoring engine backend', () => {
+    expect(skorSatuTes(70, 80, 40)).toBe(75);
+    expect(skorSatuTes(40, 80, 40)).toBe(0);
+    expect(skorSatuTes(90, 80, 40)).toBe(100);
+    expect(skorSatuTes(50, 40, 40)).toBeNull();
+  });
+
+  it('rincian komponen tes dan skor akhir', () => {
+    const t = rincianKomponenTes([{ jenisTes: 'logika', skor: 75, bobot: 0.6 }, { jenisTes: 'coding', skor: 100, bobot: 0.4 }]);
+    expect(t.total).toBeCloseTo(85);
+    expect(rincianSkorAkhir({ cv: 100, tenure: 50, tes: 85, anggaran: 100, waktu: 100 }).total).toBeCloseTo(30 + 10 + 25.5 + 10 + 10);
+    expect(rincianSkorAkhir({ cv: null, tenure: 50, tes: 85, anggaran: 100, waktu: 100 })).toBeNull();
+    expect(rincianKomponenTes([])).toBeNull();
   });
 });

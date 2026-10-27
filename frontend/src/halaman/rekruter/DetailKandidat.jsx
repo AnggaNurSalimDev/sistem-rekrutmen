@@ -15,6 +15,7 @@ import {
 } from '../../rekruter/kandidat.js';
 import { useData } from '../../rekruter/useData.js';
 import BacaCv from './BacaCv.jsx';
+import { angkaId as angka1, rincianKomponenTes, rincianSkorAkhir } from '../../rekruter/rumus.js';
 import KoreksiCv from './KoreksiCv.jsx';
 
 const NAMA_STATUS_CV = {
@@ -175,6 +176,7 @@ export default function DetailKandidat() {
               ))}
             </tbody>
           </table>
+          <RumusSkor k={k} />
           <ul className="rincian-komponen">
             {detail.cv && (
               <li>
@@ -376,6 +378,50 @@ function LogIntegritas({ log, tes }) {
           </li>
         ))}
       </ul>
+    </details>
+  );
+}
+
+/** Perhitungan skor dengan angka kandidat ini, supaya HR bisa memeriksa sendiri. */
+function RumusSkor({ k }) {
+  const tes = rincianKomponenTes(k.rincianSkor?.detail?.tes?.rincian);
+  const akhir = rincianSkorAkhir(k.skor?.komponen);
+  if (!tes && !akhir) return null;
+  const konfigurasi = Object.fromEntries(k.tes.map((t) => [t.jenisTes, t]));
+  return (
+    <details className="rumus-skor">
+      <summary>Lihat perhitungannya</summary>
+      {tes && (
+        <>
+          <p className="judul-rumus">Nilai Tes</p>
+          <ul>
+            {tes.baris.map((b) => {
+              const t = konfigurasi[b.jenisTes];
+              return (
+                <li key={b.jenisTes}>
+                  {b.jenisTes}: nilai {angka1(t?.hasil?.skor)} (batas bawah {t?.batasBawah}, target {t?.targetSkor}) → skor {angka1(b.skor)} × {angka1(b.persen)}% ={' '}
+                  {angka1(b.hasil)}
+                </li>
+              );
+            })}
+          </ul>
+          <p>
+            Nilai Tes = {tes.baris.map((b) => angka1(b.hasil)).join(' + ')} = <b>{angka1(tes.total)}</b>
+          </p>
+        </>
+      )}
+      {akhir && (
+        <>
+          <p className="judul-rumus">Skor akhir</p>
+          <p>
+            {akhir.baris.map((b) => `${b.nama} ${angka1(b.nilai)} × ${b.bobot}%`).join(' + ')}
+          </p>
+          <p>
+            = {akhir.baris.map((b) => angka1(b.hasil)).join(' + ')} = <b>{angka1(k.skorAkhir)}</b>
+          </p>
+          <p className="bantuan">Tiap angka di atas dibulatkan satu desimal; perhitungan memakai angka lengkap, jadi jumlahnya bisa selisih 0,1.</p>
+        </>
+      )}
     </details>
   );
 }
