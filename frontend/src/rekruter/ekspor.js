@@ -48,6 +48,8 @@ export function buatCsv(daftar) {
 
 /** Nama berkas aman dari posisi lowongan: huruf kecil, tanda hubung, tanggal. */
 export function namaBerkas(posisi, tanggal = new Date()) {
+  // toISOString melempar RangeError untuk tanggal tidak valid; pakai hari ini sebagai gantinya.
+  if (!(tanggal instanceof Date) || Number.isNaN(tanggal.getTime())) tanggal = new Date();
   const dasar =
     String(posisi ?? 'lowongan')
       .toLowerCase()

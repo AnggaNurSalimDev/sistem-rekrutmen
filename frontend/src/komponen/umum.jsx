@@ -75,10 +75,5 @@ export function Wajib({ peran, children }) {
   return children;
 }
 
-export function formatTanggal(iso) {
-  try {
-    return new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-  } catch {
-    return '';
-  }
-}
+// Dipindah ke src/format.js supaya bisa diuji tanpa React; diekspor ulang agar impor lama tetap jalan.
+export { formatTanggal } from '../format.js';

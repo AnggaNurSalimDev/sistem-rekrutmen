@@ -309,3 +309,19 @@ describe('rumus skor yang ditampilkan', () => {
     expect(rincianKomponenTes([])).toBeNull();
   });
 });
+
+import { formatTanggal } from '../src/format.js';
+
+describe('format tanggal', () => {
+  it('tanggal sah ditulis dalam bahasa Indonesia', () => {
+    expect(formatTanggal('2026-10-27T03:00:00Z')).toBe('27 Oktober 2026');
+  });
+
+  it('input rusak atau kosong → string kosong, bukan "Invalid Date"', () => {
+    for (const x of ['teks rusak', '2026-13-45', '', null, undefined, NaN]) expect(formatTanggal(x)).toBe('');
+  });
+
+  it('nama berkas CSV tetap aman walau tanggalnya rusak', () => {
+    expect(namaBerkas('Kasir', new Date('rusak'))).toMatch(/^kandidat-kasir-\d{4}-\d{2}-\d{2}\.csv$/);
+  });
+});
