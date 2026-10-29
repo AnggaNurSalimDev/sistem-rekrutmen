@@ -108,6 +108,49 @@ function pathPublik(x) {
   return typeof x === 'string' && /^\/(?!\/)[\w\-./]+$/.test(x) && !x.includes('..');
 }
 
+// Gambar yang diunggah lewat editor disimpan di dalam file profil sebagai data URL,
+// supaya satu file JSON sudah membawa semuanya. 150.000 karakter base64 ≈ 109 KB gambar.
+export const MAKS_DATA_URL = 150_000;
+const KB_GAMBAR = Math.floor((MAKS_DATA_URL * 0.75) / 1024);
+const POLA_DATA_URL = /^data:image\/(png|jpeg|webp|svg\+xml);base64,[A-Za-z0-9+/]+={0,2}$/;
+
+/** Path di public, atau gambar tertanam (data URL) yang kecil. URL luar ditolak. */
+export function sumberGambarValid(x) {
+  if (pathPublik(x)) return true;
+  return typeof x === 'string' && x.length <= MAKS_DATA_URL && POLA_DATA_URL.test(x);
+}
+
+/** "Toko Maju Jaya!" → "toko-maju-jaya". Untuk id profil yang dibuat editor. */
+export function slugDariNama(nama) {
+  if (typeof nama !== 'string') return '';
+  return nama
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '') // "é" → "e" + tanda aksen; aksennya dibuang
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40)
+    .replace(/-+$/g, '');
+}
+
+/**
+ * Teks file yang dipilih pengguna → profil. Tidak pernah melempar:
+ * JSON rusak menghasilkan { profil: null, masalah: [...] }.
+ */
+export function bacaTeksProfil(teks) {
+  if (typeof teks !== 'string' || teks.length === 0) return { profil: null, masalah: ['File kosong'] };
+  if (teks.length > 2 * MAKS_DATA_URL) return { profil: null, masalah: ['File terlalu besar untuk file profil'] };
+  let mentah;
+  try {
+    mentah = JSON.parse(teks);
+  } catch {
+    return { profil: null, masalah: ['Isi file bukan JSON yang valid'] };
+  }
+  const hasil = validasiProfil(mentah);
+  if (hasil.profil === PROFIL_BAWAAN && mentah?.id !== PROFIL_BAWAAN.id) return { profil: null, masalah: hasil.masalah };
+  return hasil;
+}
+
 /** Ambil `mentah[kunci]` kalau lolos `cek`; selain itu pakai bawaan dan catat masalahnya. */
 function ambil(mentah, kunci, cek, bawaan, masalah, pesan, jalur) {
   if (!(kunci in mentah)) return bawaan;
@@ -149,7 +192,7 @@ export function validasiProfil(mentah) {
   const profil = {
     id: mentah.id,
     nama,
-    favicon: ambil(mentah, 'favicon', pathPublik, B.favicon, masalah, 'path di folder public, contoh "/merek/toko.svg"', ''),
+    favicon: ambil(mentah, 'favicon', sumberGambarValid, B.favicon, masalah, `path di folder public (contoh "/merek/toko.svg") atau gambar ≤ ${KB_GAMBAR} KB`, ''),
     huruf: ambil(mentah, 'huruf', (x) => x in HURUF, B.huruf, masalah, `salah satu: ${Object.keys(HURUF).join(', ')}`, ''),
     fiktif: ambil(mentah, 'fiktif', (x) => typeof x === 'boolean', false, masalah, 'true/false', ''),
     logo: validasiBagian(
@@ -158,7 +201,7 @@ export function validasiProfil(mentah) {
       {
         teks: [(x) => teksPendek(x, 40), '1–40 karakter'],
         titik: [(x) => typeof x === 'boolean', 'true/false'],
-        gambar: [(x) => x === null || pathPublik(x), 'null atau path di folder public'],
+        gambar: [(x) => x === null || sumberGambarValid(x), `null, path di folder public, atau gambar ≤ ${KB_GAMBAR} KB`],
       },
       'logo.',
       masalah,

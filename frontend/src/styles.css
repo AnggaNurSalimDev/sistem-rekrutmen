@@ -1732,6 +1732,10 @@ th.angka .tombol-urut {
 }
 .merek img {
   display: block;
+  height: 28px;
+  width: auto;
+  max-width: 140px;
+  object-fit: contain;
   border-radius: var(--radius-kecil);
 }
 
@@ -1777,4 +1781,182 @@ th.angka .tombol-urut {
 }
 .pengalih-demo p {
   margin-top: 6px;
+}
+
+/* ------------------------------------------------------------ editor tampilan */
+
+.editor-tampilan {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+  gap: 32px;
+  align-items: start;
+}
+.editor-pratinjau {
+  position: sticky;
+  top: 16px;
+  display: grid;
+  gap: 16px;
+}
+@media (max-width: 860px) {
+  .editor-tampilan {
+    grid-template-columns: 1fr;
+  }
+  .editor-pratinjau {
+    position: static;
+  }
+}
+.editor-form .bagian {
+  padding: 20px;
+  background: var(--permukaan);
+  border: 1px solid var(--garis);
+  border-radius: var(--radius);
+  margin-bottom: 20px;
+}
+.editor-form .bagian > h2 {
+  font-size: 1.125rem;
+  margin-bottom: 16px;
+}
+.editor-form textarea {
+  width: 100%;
+}
+.baris-aksi {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.pilih {
+  font: inherit;
+  min-height: 44px;
+  padding: 0 10px;
+  color: var(--tinta);
+  background: var(--permukaan);
+  border: 1.5px solid var(--garis);
+  border-radius: var(--radius-kecil);
+}
+.label-isian {
+  font-weight: 700;
+}
+.centang {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: -6px 0 20px;
+  font-size: 0.9375rem;
+}
+.pilih-berkas {
+  cursor: pointer;
+}
+.pilih-berkas:focus-within {
+  outline: 3px solid var(--tautan);
+  outline-offset: 2px;
+}
+.contoh-logo {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  background: var(--utama);
+  border-radius: var(--radius-kecil);
+  padding: 6px;
+}
+.baris-warna {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.baris-warna input[type='color'] {
+  width: 56px;
+  height: 46px;
+  padding: 2px;
+  border: 1.5px solid var(--garis);
+  border-radius: var(--radius-kecil);
+  background: var(--permukaan);
+  cursor: pointer;
+}
+.baris-warna input[type='text'] {
+  max-width: 140px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.catatan-otomatis {
+  margin: -12px 0 20px;
+  font-size: 0.875rem;
+  color: var(--tinta-lembut);
+}
+.pilihan-huruf {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.pilihan-huruf button {
+  display: grid;
+  gap: 2px;
+  justify-items: start;
+  padding: 12px;
+  text-align: left;
+  font: inherit;
+  color: var(--tinta);
+  background: var(--permukaan);
+  border: 1.5px solid var(--garis);
+  border-radius: var(--radius-kecil);
+  cursor: pointer;
+}
+.pilihan-huruf button[aria-pressed='true'] {
+  border-color: var(--tautan);
+  box-shadow: inset 0 0 0 2px var(--tautan);
+}
+.pilihan-huruf small {
+  color: var(--tinta-lembut);
+  font-size: 0.75rem;
+}
+.contoh-huruf {
+  font-size: 1.75rem;
+  font-weight: 750;
+  line-height: 1.1;
+}
+.pilihan-huruf [data-huruf='jakarta'] .contoh-huruf {
+  font-family: 'Plus Jakarta Sans Variable', sans-serif;
+}
+.pilihan-huruf [data-huruf='fraunces'] .contoh-huruf {
+  font-family: 'Fraunces Variable', serif;
+}
+.pilihan-huruf [data-huruf='grotesk'] .contoh-huruf {
+  font-family: 'Space Grotesk Variable', sans-serif;
+}
+.kartu-pratinjau {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  background: var(--permukaan);
+  border: 1px solid var(--garis);
+  border-radius: var(--radius);
+}
+.kartu-pratinjau h3 {
+  font-size: 1.375rem;
+}
+.label-kecil {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--tinta-lembut);
+}
+.baris-lowongan.contoh {
+  border-top: 2px solid var(--tinta);
+  border-bottom: 1px solid var(--garis);
+  padding: 10px 0;
+}
+.baris-lowongan.contoh h4 {
+  margin: 0;
+}
+.aksi-editor {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+.bantuan-kecil {
+  font-size: 0.8125rem;
+  color: var(--tinta-lembut);
+}
+.editor-form .segmen {
+  justify-self: start;
 }

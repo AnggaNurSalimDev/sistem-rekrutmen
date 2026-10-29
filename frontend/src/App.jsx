@@ -11,10 +11,13 @@ import FormLowongan from './halaman/rekruter/FormLowongan.jsx';
 import LowonganRekruter from './halaman/rekruter/LowonganRekruter.jsx';
 import KelolaSoal from './halaman/rekruter/KelolaSoal.jsx';
 import DetailKandidat from './halaman/rekruter/DetailKandidat.jsx';
+import AturTampilan from './halaman/AturTampilan.jsx';
+import { MODE_DEMO } from './merek/ProfilContext.jsx';
 
 function Kerangka() {
   // Halaman rekruter berisi tabel lebar; halaman pelamar tetap satu kolom sempit.
-  const lebar = useLocation().pathname.startsWith('/rekruter');
+  const { pathname } = useLocation();
+  const lebar = pathname.startsWith('/rekruter') || pathname === '/atur-tampilan';
   return (
     <>
       <a href="#isi" className="sr-only">
@@ -57,6 +60,8 @@ const router = createBrowserRouter([
       { path: '/rekruter/lowongan/:id/ubah', element: <Wajib peran="rekruter"><FormLowongan /></Wajib> },
       { path: '/rekruter/lowongan/:lowonganId/tes/:tesId/soal', element: <Wajib peran="rekruter"><KelolaSoal /></Wajib> },
       { path: '/rekruter/kandidat/:id', element: <Wajib peran="rekruter"><DetailKandidat /></Wajib> },
+      // Editor tampilan hanya ada di demo portofolio; di situs klien profil terkunci.
+      { path: '/atur-tampilan', element: MODE_DEMO ? <AturTampilan /> : <TidakDitemukan /> },
       { path: '*', element: <TidakDitemukan /> },
     ],
   },

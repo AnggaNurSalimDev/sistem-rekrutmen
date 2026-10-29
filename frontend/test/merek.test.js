@@ -129,3 +129,77 @@ describe('pilihIdProfil', () => {
     expect(pilihIdProfil({ bawaan: 'salah-ketik', demo: false, tersedia })).toBe('rekrut');
   });
 });
+
+import { bacaTeksProfil, slugDariNama, sumberGambarValid } from '../src/merek/profil.js';
+import { MAKS_BYTE_GAMBAR, draftKeMentah, galatPerField, namaFileUnduhan, periksaBerkasGambar, profilKeDraf } from '../src/merek/editor.js';
+
+describe('editor tampilan', () => {
+  test('slug dari nama', () => {
+    expect(slugDariNama('Toko Maju Jaya!')).toBe('toko-maju-jaya');
+    expect(slugDariNama('  Café Ümit  ')).toBe('cafe-umit');
+    expect(slugDariNama('!!!')).toBe('');
+    expect(slugDariNama(null)).toBe('');
+  });
+
+  test('gambar: path publik dan data URL kecil diterima, URL luar dan data URL raksasa ditolak', () => {
+    expect(sumberGambarValid('/merek/a.svg')).toBe(true);
+    expect(sumberGambarValid('data:image/png;base64,iVBORw0KGgo=')).toBe(true);
+    expect(sumberGambarValid('https://contoh.com/a.png')).toBe(false);
+    expect(sumberGambarValid('data:text/html;base64,PHNjcmlwdD4=')).toBe(false);
+    expect(sumberGambarValid('data:image/png;base64,' + 'A'.repeat(200_000))).toBe(false);
+  });
+
+  test('draf → profil → draf tidak kehilangan isi', () => {
+    const awal = profilKeDraf(PROFIL_BAWAAN);
+    const { profil, masalah } = validasiProfil(draftKeMentah({ ...awal, nama: 'Toko Maju', logo: { ...awal.logo, teks: '' } }));
+    expect(masalah).toEqual([]);
+    expect(profil.id).toBe('toko-maju');
+    expect(profil.logo.teks).toBe('Toko Maju'); // tulisan logo kosong → ikut nama
+    expect(profil.teks.tentang).toBe(null); // '' → null
+    expect(profil.favicon).toBe('/favicon.svg'); // tanpa logo → ikon bawaan
+    expect(profilKeDraf(profil).teks.tentang).toBe('');
+  });
+
+  test('logo tertanam ikut menjadi favicon', () => {
+    const gambar = 'data:image/png;base64,iVBORw0KGgo=';
+    const d = profilKeDraf(PROFIL_BAWAAN);
+    expect(draftKeMentah({ ...d, logo: { ...d.logo, gambar } }).favicon).toBe(gambar);
+  });
+
+  test('nama kosong → galat di field nama, id cadangan "perusahaan"', () => {
+    const d = profilKeDraf(PROFIL_BAWAAN);
+    const mentah = draftKeMentah({ ...d, nama: '' });
+    expect(mentah.id).toBe('perusahaan');
+    expect(galatPerField(validasiProfil(mentah).masalah).nama).toBeTruthy();
+  });
+
+  test('galatPerField mengambil pesan pertama per field dan mengabaikan sampah', () => {
+    expect(galatPerField(['warna.utama: a', 'warna.utama: b', 'tanpa titik dua', 42])).toEqual({ 'warna.utama': 'a' });
+    expect(galatPerField(null)).toEqual({});
+  });
+
+  test('periksaBerkasGambar', () => {
+    expect(periksaBerkasGambar(null)).toMatch(/Pilih/);
+    expect(periksaBerkasGambar({ type: 'image/gif', size: 10 })).toMatch(/PNG/);
+    expect(periksaBerkasGambar({ type: 'image/png', size: 0 })).toMatch(/kosong/);
+    expect(periksaBerkasGambar({ type: 'image/png', size: MAKS_BYTE_GAMBAR + 1 })).toMatch(/maksimal/);
+    expect(periksaBerkasGambar({ type: 'image/svg+xml', size: 2000 })).toBe(null);
+  });
+
+  test('gambar sebesar batas maksimal masih lolos validasi setelah jadi data URL', () => {
+    const base64 = 'A'.repeat(Math.ceil(MAKS_BYTE_GAMBAR / 3) * 4);
+    expect(sumberGambarValid(`data:image/png;base64,${base64}`)).toBe(true);
+  });
+
+  test('bacaTeksProfil tidak pernah melempar', () => {
+    expect(bacaTeksProfil('{rusak').profil).toBe(null);
+    expect(bacaTeksProfil('').profil).toBe(null);
+    expect(bacaTeksProfil('{"nama":"tanpa id"}').profil).toBe(null);
+    expect(bacaTeksProfil(JSON.stringify({ id: 'toko', nama: 'Toko' })).profil.nama).toBe('Toko');
+  });
+
+  test('nama file unduhan', () => {
+    expect(namaFileUnduhan({ id: 'toko-maju' })).toBe('profil-toko-maju.json');
+    expect(namaFileUnduhan({})).toBe('profil-perusahaan.json');
+  });
+});

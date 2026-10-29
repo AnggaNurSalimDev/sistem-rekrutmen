@@ -91,6 +91,7 @@ Variabel `VITE_*` dibaca saat **build**. Mengubahnya di Vercel butuh **Redeploy*
 - [ ] Buka `/rekruter` langsung (bukan lewat klik) → halaman masuk, bukan 404.
 - [ ] Masuk `hr@demo.rekrut.id` / `demo12345` → tabel kandidat, grafik, tombol "Buka PDF asli" membuka PDF.
 - [ ] Ganti profil di bawah halaman → warna, huruf, logo, judul tab berubah; refresh tetap di profil itu.
+- [ ] "Buat tampilan untuk perusahaan Anda" → isi nama + logo → **Pakai di demo ini** → beranda memakai merek baru.
 - [ ] Coba dari HP.
 - [ ] Console browser tanpa galat CORS.
 

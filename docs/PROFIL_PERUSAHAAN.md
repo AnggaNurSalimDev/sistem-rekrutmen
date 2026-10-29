@@ -3,6 +3,27 @@
 Satu file JSON menentukan merek, huruf, teks beranda, dan gaya seluruh aplikasi.
 Data, skor, dan alur tidak berubah; yang berubah hanya tampilan.
 
+**Tidak ada yang perlu menulis JSON dengan tangan.** File dibuat lewat halaman editor
+`/atur-tampilan` di situs demo (tautan "Buat tampilan untuk perusahaan Anda" di bawah halaman).
+
+```
+calon klien / pengembang                     situs demo
+  isi form (nama, logo, warna, huruf, teks) ──▶ seluruh halaman berubah langsung
+                                                │
+           ┌────────────────────────────────────┴───────────────┐
+           ▼                                                    ▼
+  "Pakai di demo ini"                                 "Unduh file profil"
+  tersimpan di browser itu saja,                      profil-<nama>.json (logo ikut di dalamnya)
+  bisa diklik-klik di seluruh demo                    → bahan deploy situs klien
+```
+
+Alur dengan klien:
+1. Saat presentasi, buka `/atur-tampilan`, isi bersama klien (atau klien mencoba sendiri dari HP-nya).
+2. Klik **Unduh file profil**. Kalau perlu revisi nanti: **Buka file profil** → ubah → unduh lagi.
+3. Saat membuat situs klien: taruh file itu di `frontend/src/merek/profil/`, set `VITE_PROFIL=<id>` (id tertulis di dalam file, sama dengan nama file tanpa `profil-`).
+
+Editor hanya ada di mode demo. Di situs klien, `/atur-tampilan` menampilkan "Halaman tidak ditemukan".
+
 ```
 src/merek/profil/<id>.json
         │  validasiProfil()   field salah → nilai bawaan + peringatan di console
@@ -45,7 +66,7 @@ src/merek/profil/<id>.json
 | `gaya.tema` | `terang`, `gelap` |
 | `gaya.sudut` | `tajam`, `sedang`, `bulat` |
 | `gaya.kerapatan` | `rapat`, `normal`, `lega` (mengubah ukuran dasar huruf dan lebar konten) |
-| `logo.gambar`, `favicon` | path di `frontend/public`, bukan URL luar |
+| `logo.gambar`, `favicon` | path di `frontend/public`, atau gambar tertanam (data URL PNG/JPG/WEBP/SVG ≤ 109 KB) dari editor. URL luar ditolak. |
 | `fiktif` | `true` untuk profil demo; ditandai "(fiktif)" di pengalih |
 
 Yang sengaja **tidak** ikut profil: kuning, hijau, merah (warna status: "Sementara", "Diterima", galat).
@@ -74,8 +95,8 @@ Urutan di mode demo: `?profil=` di alamat → pilihan terakhir (localStorage) �
 
 ## Menambah klien
 
-1. Salin `src/merek/profil/rekrut.json` menjadi `<id-klien>.json`, ubah isinya.
-2. Logo SVG/PNG ke `public/merek/`.
+1. Buat file lewat editor `/atur-tampilan` → **Unduh file profil**.
+2. Simpan di `src/merek/profil/`.
 3. `npm test` (cek kontras), lalu `VITE_PROFIL=<id-klien> npm run dev` untuk melihat hasilnya.
 
 Catatan privasi: semua file di `src/merek/profil` ikut masuk ke hasil build. Profil klien sungguhan

@@ -5,7 +5,7 @@ import { useProfil } from '../merek/ProfilContext.jsx';
 
 export function Kepala({ lebar = false }) {
   const { user, keluar } = useAuth();
-  const { profil } = useProfil();
+  const { tampil: profil } = useProfil();
   const navigate = useNavigate();
   // Pindah ke halaman publik dulu, baru keluar. Kalau keluar dulu, halaman
   // berlogin yang sedang terbuka akan mengirim ke /masuk?ke=<halaman itu>,
@@ -18,7 +18,7 @@ export function Kepala({ lebar = false }) {
     <header className="kepala">
       <div className={lebar ? 'wadah lebar' : 'wadah'}>
         <Link to="/" className="merek" aria-label={`${profil.nama}, ke daftar lowongan`}>
-          {profil.logo.gambar && <img src={profil.logo.gambar} alt="" width="28" height="28" />}
+          {profil.logo.gambar && <img src={profil.logo.gambar} alt="" height="28" />}
           <span>
             {profil.logo.teks}
             {profil.logo.titik && <span className="titik">.</span>}
@@ -48,7 +48,9 @@ export function Kepala({ lebar = false }) {
 /** Hanya di mode demo: ganti profil perusahaan untuk melihat fleksibilitas tampilan. */
 export function PengalihDemo() {
   const { profil, daftar, demo, ganti } = useProfil();
-  if (!demo || daftar.length < 2) return null;
+  const { pathname } = useLocation();
+  // Di editor, pengalih disembunyikan: mengganti profil di sini akan menimpa pratinjau draf.
+  if (!demo || pathname === '/atur-tampilan') return null;
   return (
     <footer className="pengalih-demo">
       <div className="wadah lebar">
@@ -63,7 +65,10 @@ export function PengalihDemo() {
             ))}
           </select>
         </label>
-        <p>Data lowongan sama untuk semua profil; yang berubah hanya merek, huruf, teks, dan gaya.</p>
+        <p>
+          Data lowongan sama untuk semua profil; yang berubah hanya merek, huruf, teks, dan gaya.{' '}
+          <Link to="/atur-tampilan">Buat tampilan untuk perusahaan Anda</Link>
+        </p>
       </div>
     </footer>
   );
