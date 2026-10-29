@@ -1,6 +1,6 @@
 import { createBrowserRouter, Link, Outlet, RouterProvider, useLocation } from 'react-router-dom';
 import { PenyediaAuth } from './auth/AuthContext.jsx';
-import { Kepala, Pesan, Wajib } from './komponen/umum.jsx';
+import { Kepala, PengalihDemo, Pesan, Wajib } from './komponen/umum.jsx';
 import Beranda from './halaman/Beranda.jsx';
 import DetailLowongan from './halaman/DetailLowongan.jsx';
 import { Masuk, Daftar } from './halaman/Auth.jsx';
@@ -26,6 +26,7 @@ function Kerangka() {
           <Outlet />
         </div>
       </main>
+      <PengalihDemo />
     </>
   );
 }

@@ -1,0 +1,16 @@
+{
+  "id": "sinar-pagi",
+  "nama": "Sinar Pagi Mart",
+  "fiktif": true,
+  "logo": { "teks": "Sinar Pagi", "titik": false, "gambar": "/merek/sinar-pagi.svg" },
+  "favicon": "/merek/sinar-pagi.svg",
+  "warna": { "utama": "#b4410e", "aksen": "#fde68a" },
+  "huruf": "jakarta",
+  "gaya": { "tema": "terang", "sudut": "bulat", "kerapatan": "lega" },
+  "teks": {
+    "judulBeranda": "Tumbuh bareng Sinar Pagi",
+    "deskripsiBeranda": "Kami mencari kasir, pramuniaga, dan kepala toko untuk cabang baru. Daftar dari HP, kirim CV, lalu ikuti tes singkat.",
+    "tentang": "Sinar Pagi Mart adalah jaringan minimarket keluarga dengan 40 cabang di Jawa Barat. Jam kerja bergilir, pelatihan dari hari pertama, dan jenjang karier sampai kepala area.",
+    "tombolLamar": "Daftar sekarang"
+  }
+}

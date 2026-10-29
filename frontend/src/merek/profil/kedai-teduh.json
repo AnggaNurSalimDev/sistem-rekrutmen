@@ -1,0 +1,16 @@
+{
+  "id": "kedai-teduh",
+  "nama": "Kedai Teduh",
+  "fiktif": true,
+  "logo": { "teks": "Kedai Teduh", "titik": false, "gambar": "/merek/kedai-teduh.svg" },
+  "favicon": "/merek/kedai-teduh.svg",
+  "warna": { "utama": "#2f4a3a", "aksen": "#e9c46a" },
+  "huruf": "fraunces",
+  "gaya": { "tema": "terang", "sudut": "sedang", "kerapatan": "normal" },
+  "teks": {
+    "judulBeranda": "Ada kursi kosong di balik bar kami",
+    "deskripsiBeranda": "Barista, kru dapur, dan kasir. Tidak harus berpengalaman — yang penting mau belajar dan ramah ke tamu.",
+    "tentang": "Kedai Teduh adalah kedai kopi dengan tiga cabang di Bandung. Setiap kru baru ikut kelas seduh dua minggu sebelum bertugas.",
+    "tombolLamar": "Gabung kru"
+  }
+}

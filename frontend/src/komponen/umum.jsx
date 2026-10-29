@@ -1,9 +1,11 @@
 import { Link, NavLink, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { berandaPeran } from '../auth/tujuan.js';
 import { useAuth } from '../auth/AuthContext.jsx';
+import { useProfil } from '../merek/ProfilContext.jsx';
 
 export function Kepala({ lebar = false }) {
   const { user, keluar } = useAuth();
+  const { profil } = useProfil();
   const navigate = useNavigate();
   // Pindah ke halaman publik dulu, baru keluar. Kalau keluar dulu, halaman
   // berlogin yang sedang terbuka akan mengirim ke /masuk?ke=<halaman itu>,
@@ -15,8 +17,12 @@ export function Kepala({ lebar = false }) {
   return (
     <header className="kepala">
       <div className={lebar ? 'wadah lebar' : 'wadah'}>
-        <Link to="/" className="merek" aria-label="Rekrut, ke daftar lowongan">
-          Rekrut<span>.</span>
+        <Link to="/" className="merek" aria-label={`${profil.nama}, ke daftar lowongan`}>
+          {profil.logo.gambar && <img src={profil.logo.gambar} alt="" width="28" height="28" />}
+          <span>
+            {profil.logo.teks}
+            {profil.logo.titik && <span className="titik">.</span>}
+          </span>
         </Link>
         <nav className="navigasi" aria-label="Utama">
           {user?.role !== 'rekruter' && (
@@ -36,6 +42,30 @@ export function Kepala({ lebar = false }) {
         </nav>
       </div>
     </header>
+  );
+}
+
+/** Hanya di mode demo: ganti profil perusahaan untuk melihat fleksibilitas tampilan. */
+export function PengalihDemo() {
+  const { profil, daftar, demo, ganti } = useProfil();
+  if (!demo || daftar.length < 2) return null;
+  return (
+    <footer className="pengalih-demo">
+      <div className="wadah lebar">
+        <label>
+          <span>Mode demo — lihat tampilan untuk</span>
+          <select value={profil.id} onChange={(e) => ganti(e.target.value)}>
+            {daftar.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nama}
+                {p.fiktif ? ' (fiktif)' : ''}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p>Data lowongan sama untuk semua profil; yang berubah hanya merek, huruf, teks, dan gaya.</p>
+      </div>
+    </footer>
   );
 }
 

@@ -1,20 +1,34 @@
-/* Token desain. Satu keluarga huruf (Plus Jakarta Sans), satu aksen kuat
-   (kuning label harga) yang hanya dipakai untuk stempel status. */
+/* Token desain. Warna merek (--utama, --aksen), huruf, sudut, dan kerapatan
+   diatur per perusahaan lewat src/merek/profil/*.json. Kuning, hijau, merah
+   adalah warna status dan sengaja tidak ikut profil. */
 :root {
   --latar: #f3f5f8;
   --permukaan: #ffffff;
   --tinta: #1b2333;
   --tinta-lembut: #4b5568;
   --garis: #d8dde6;
-  --indigo: #2b3a8f;
-  --indigo-gelap: #1f2a6b;
-  --indigo-pudar: #e7eaf7;
+  --utama: #2b3a8f;
+  --utama-gelap: #1f2a6b;
+  --utama-pudar: #e7eaf7;
   --kuning: #f2b705;
   --kuning-gelap: #6b4f00;
   --hijau: #1f7a4d;
   --hijau-pudar: #e3f2ea;
   --merah: #b42318;
   --merah-pudar: #fdecea;
+  /* Nilai di bawah ini hanya cadangan. Nilai sebenarnya ditulis src/merek/profil.js
+     ke <html style> sesuai profil perusahaan yang aktif. */
+  --di-atas-utama: #ffffff;
+  --tautan: #2b3a8f;
+  --tanda-data: #4352b0;
+  --aksen: #f2b705;
+  --kuning-pudar: #fff8e1;
+  --di-atas-kuning: #6b4f00;
+  --kuning-stabilo: #ffe680;
+  --garis-bantu: #e8ebf0;
+  --garis-sumbu: #c4cad4;
+  --baris-sorot: #fafbfd;
+  --ukuran-dasar: 100%;
 
   --huruf: 'Plus Jakarta Sans Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --radius-kecil: 6px;
@@ -33,6 +47,7 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  font-size: var(--ukuran-dasar);
 }
 
 body {
@@ -71,12 +86,12 @@ p {
 }
 
 a {
-  color: var(--indigo);
+  color: var(--tautan);
   text-underline-offset: 3px;
 }
 
 :focus-visible {
-  outline: 3px solid var(--indigo);
+  outline: 3px solid var(--tautan);
   outline-offset: 2px;
   border-radius: var(--radius-kecil);
 }
@@ -100,8 +115,8 @@ a {
 }
 
 .kepala {
-  background: var(--indigo);
-  color: #fff;
+  background: var(--utama);
+  color: var(--di-atas-utama);
 }
 .kepala .wadah {
   display: flex;
@@ -111,14 +126,14 @@ a {
   min-height: 60px;
 }
 .merek {
-  color: #fff;
+  color: var(--di-atas-utama);
   font-weight: 800;
   font-size: 1.25rem;
   text-decoration: none;
   letter-spacing: -0.02em;
 }
-.merek span {
-  color: var(--kuning);
+.merek .titik {
+  color: var(--aksen);
 }
 .navigasi {
   display: flex;
@@ -127,17 +142,17 @@ a {
   font-size: 0.9375rem;
 }
 .navigasi a {
-  color: #fff;
+  color: var(--di-atas-utama);
   text-decoration: none;
   font-weight: 600;
 }
 .navigasi a[aria-current='page'] {
   text-decoration: underline;
-  text-decoration-color: var(--kuning);
+  text-decoration-color: var(--aksen);
   text-decoration-thickness: 3px;
 }
 .navigasi .tombol-teks {
-  color: #fff;
+  color: var(--di-atas-utama);
 }
 
 main {
@@ -164,15 +179,15 @@ main {
   padding: 0 18px;
   border: 0;
   border-radius: var(--radius-kecil);
-  background: var(--indigo);
-  color: #fff;
+  background: var(--utama);
+  color: var(--di-atas-utama);
   font: inherit;
   font-weight: 700;
   cursor: pointer;
   text-decoration: none;
 }
 .tombol:hover {
-  background: var(--indigo-gelap);
+  background: var(--utama-gelap);
 }
 .tombol:disabled {
   opacity: 0.55;
@@ -180,11 +195,11 @@ main {
 }
 .tombol.kedua {
   background: var(--permukaan);
-  color: var(--indigo);
-  box-shadow: inset 0 0 0 2px var(--indigo);
+  color: var(--tautan);
+  box-shadow: inset 0 0 0 2px var(--tautan);
 }
 .tombol.kedua:hover {
-  background: var(--indigo-pudar);
+  background: var(--utama-pudar);
 }
 .tombol-teks {
   background: none;
@@ -192,7 +207,7 @@ main {
   padding: 0;
   font: inherit;
   font-weight: 600;
-  color: var(--indigo);
+  color: var(--tautan);
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -226,9 +241,9 @@ main {
   color: var(--tinta);
 }
 .isian input:focus-visible {
-  outline: 3px solid var(--indigo);
+  outline: 3px solid var(--tautan);
   outline-offset: 0;
-  border-color: var(--indigo);
+  border-color: var(--tautan);
 }
 .isian [aria-invalid='true'] {
   border-color: var(--merah);
@@ -258,12 +273,12 @@ fieldset.isian {
   margin-top: 8px;
 }
 .pilihan:has(input:checked) {
-  border-color: var(--indigo);
-  background: var(--indigo-pudar);
+  border-color: var(--tautan);
+  background: var(--utama-pudar);
 }
 .pilihan input {
   margin-top: 4px;
-  accent-color: var(--indigo);
+  accent-color: var(--tautan);
   width: 18px;
   height: 18px;
   flex: none;
@@ -294,7 +309,7 @@ fieldset.isian {
   background: var(--permukaan);
 }
 .unggah:focus-within {
-  border-color: var(--indigo);
+  border-color: var(--tautan);
 }
 .unggah input {
   font: inherit;
@@ -305,8 +320,8 @@ fieldset.isian {
 .pesan {
   padding: 14px 16px;
   border-radius: var(--radius-kecil);
-  border-left: 5px solid var(--indigo);
-  background: var(--indigo-pudar);
+  border-left: 5px solid var(--tautan);
+  background: var(--utama-pudar);
   margin-bottom: 20px;
 }
 .pesan.galat {
@@ -352,7 +367,7 @@ fieldset.isian {
   text-decoration: none;
 }
 .baris-lowongan:hover h2 {
-  color: var(--indigo);
+  color: var(--tautan);
   text-decoration: underline;
   text-underline-offset: 4px;
 }
@@ -390,8 +405,8 @@ fieldset.isian {
 .daftar-skill li {
   padding: 3px 10px;
   border-radius: 999px;
-  background: var(--indigo-pudar);
-  color: var(--indigo-gelap);
+  background: var(--utama-pudar);
+  color: var(--utama-gelap);
   font-size: 0.875rem;
   font-weight: 600;
 }
@@ -482,10 +497,10 @@ fieldset.isian {
   top: 18px;
   right: 18px;
   padding: 4px 10px;
-  border: 2.5px solid var(--kuning-gelap);
+  border: 2.5px solid var(--di-atas-kuning);
   border-radius: 4px;
   background: var(--kuning);
-  color: var(--kuning-gelap);
+  color: var(--di-atas-kuning);
   font-weight: 800;
   font-size: 0.875rem;
   transform: rotate(-4deg);
@@ -567,7 +582,7 @@ fieldset.isian {
   width: 10px;
   height: 10px;
   border-radius: 2px;
-  background: var(--indigo);
+  background: var(--utama);
 }
 
 .bilah-ujian {
@@ -616,7 +631,7 @@ fieldset.isian {
 }
 .kemajuan div {
   height: 100%;
-  background: var(--indigo);
+  background: var(--utama);
   transition: width 200ms;
 }
 
@@ -662,7 +677,7 @@ fieldset.isian {
 .konfirmasi {
   padding: 20px;
   border-radius: var(--radius);
-  border: 2px solid var(--indigo);
+  border: 2px solid var(--tautan);
   background: var(--permukaan);
   margin-top: 8px;
 }
@@ -706,7 +721,7 @@ textarea {
   resize: vertical;
 }
 textarea:focus-visible {
-  outline: 3px solid var(--indigo);
+  outline: 3px solid var(--tautan);
   outline-offset: 0;
 }
 .isian input[type='search'],
@@ -830,7 +845,7 @@ textarea:focus-visible {
 }
 .tab button[aria-current='page'] {
   background: var(--tinta);
-  color: #fff;
+  color: var(--permukaan);
 }
 
 /* Form lowongan */
@@ -958,7 +973,7 @@ textarea:focus-visible {
   justify-content: space-between;
   gap: 12px;
   border-left-color: var(--kuning-gelap);
-  background: #fff8e1;
+  background: var(--kuning-pudar);
 }
 .pesan.antrean strong {
   display: inline;
@@ -993,7 +1008,7 @@ textarea:focus-visible {
 }
 .segmen button[aria-pressed='true'] {
   background: var(--tinta);
-  color: #fff;
+  color: var(--permukaan);
 }
 @media (max-width: 640px) {
   .segmen {
@@ -1054,11 +1069,11 @@ textarea:focus-visible {
   outline: 2px solid var(--tinta);
 }
 .garis-bantu {
-  stroke: #e8ebf0;
+  stroke: var(--garis-bantu);
   stroke-width: 1;
 }
 .garis-dasar {
-  stroke: #c4cad4;
+  stroke: var(--garis-sumbu);
   stroke-width: 1;
 }
 .teks-sumbu {
@@ -1080,7 +1095,7 @@ textarea:focus-visible {
   transform: translate(-50%, -100%);
   padding: 6px 10px;
   background: var(--tinta);
-  color: #fff;
+  color: var(--permukaan);
   font-size: 0.8125rem;
   font-weight: 600;
   border-radius: var(--radius-kecil);
@@ -1098,7 +1113,7 @@ textarea:focus-visible {
 }
 .tabel-grafik summary {
   cursor: pointer;
-  color: var(--indigo);
+  color: var(--tautan);
   font-weight: 600;
 }
 .tabel-grafik table {
@@ -1150,7 +1165,7 @@ textarea:focus-visible {
   display: block;
 }
 .tabel-kandidat tbody tr:hover {
-  background: #fafbfd;
+  background: var(--baris-sorot);
 }
 .tabel-kandidat .angka {
   text-align: right;
@@ -1216,7 +1231,7 @@ th.angka .tombol-urut {
   padding: 16px 20px;
   margin-bottom: 20px;
   background: var(--permukaan);
-  border: 2px dashed var(--indigo);
+  border: 2px dashed var(--tautan);
   border-radius: var(--radius);
 }
 .pratinjau-soal ol {
@@ -1258,7 +1273,7 @@ th.angka .tombol-urut {
   place-items: center;
   border-radius: 50%;
   background: var(--tinta);
-  color: #fff;
+  color: var(--permukaan);
   font-weight: 800;
   font-size: 0.8125rem;
 }
@@ -1326,7 +1341,7 @@ th.angka .tombol-urut {
   padding: 18px 20px;
   margin-bottom: 16px;
   background: var(--permukaan);
-  border: 2px solid var(--indigo);
+  border: 2px solid var(--tautan);
   border-radius: var(--radius);
 }
 .form-soal h2,
@@ -1426,7 +1441,7 @@ th.angka .tombol-urut {
 .daftar-flag li {
   padding: 6px 10px 6px 12px;
   border-left: 4px solid var(--kuning-gelap);
-  background: #fff8e1;
+  background: var(--kuning-pudar);
   font-size: 0.875rem;
 }
 .ringkas {
@@ -1447,7 +1462,7 @@ th.angka .tombol-urut {
 }
 .log-integritas summary {
   cursor: pointer;
-  color: var(--indigo);
+  color: var(--tautan);
   font-weight: 600;
 }
 .log-integritas ul {
@@ -1546,7 +1561,7 @@ th.angka .tombol-urut {
   padding: 4px 10px;
   border-radius: 999px;
   cursor: pointer;
-  background: #ffe680;
+  background: var(--kuning-stabilo);
   color: var(--tinta);
 }
 .chip[aria-pressed='false'] {
@@ -1578,13 +1593,13 @@ th.angka .tombol-urut {
   font-size: 0.8125rem;
 }
 .contoh-ai {
-  border-bottom: 3px solid #4352b0;
-  background: var(--indigo-pudar);
+  border-bottom: 3px solid var(--tanda-data);
+  background: var(--utama-pudar);
   padding: 0 2px;
 }
 .contoh-kata,
 .sorot-kata {
-  background: #ffe680;
+  background: var(--kuning-stabilo);
   color: inherit;
   padding: 0;
 }
@@ -1601,12 +1616,12 @@ th.angka .tombol-urut {
   line-height: 1.7;
 }
 .sorot-ai {
-  background: var(--indigo-pudar);
-  border-bottom: 3px solid #4352b0;
+  background: var(--utama-pudar);
+  border-bottom: 3px solid var(--tanda-data);
   cursor: help;
 }
 .sorot-ai.sorot-kata {
-  background: #ffe680;
+  background: var(--kuning-stabilo);
 }
 
 .hasil-tes {
@@ -1651,7 +1666,7 @@ th.angka .tombol-urut {
   padding: 16px 18px;
   background: var(--permukaan);
   border: 1px solid var(--garis);
-  border-left: 5px solid var(--indigo);
+  border-left: 5px solid var(--tautan);
   border-radius: var(--radius-kecil);
   font-size: 0.9375rem;
 }
@@ -1679,7 +1694,7 @@ th.angka .tombol-urut {
 }
 .rumus-skor summary {
   cursor: pointer;
-  color: var(--indigo);
+  color: var(--tautan);
   font-weight: 700;
 }
 .rumus-skor ul {
@@ -1699,11 +1714,67 @@ th.angka .tombol-urut {
   font-size: 0.875rem;
   border: 1.5px dashed var(--kuning-gelap);
   border-radius: var(--radius-kecil);
-  background: #fff8e1;
+  background: var(--kuning-pudar);
 }
 .alasan-keputusan {
   margin: -8px 0 20px;
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--kuning-gelap);
+}
+
+/* ------------------------------------------------------------ profil perusahaan */
+
+.merek {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.merek img {
+  display: block;
+  border-radius: var(--radius-kecil);
+}
+
+.tentang-perusahaan {
+  margin: -8px 0 28px;
+  padding: 16px 20px;
+  background: var(--utama-pudar);
+  border-left: 5px solid var(--utama);
+  border-radius: var(--radius);
+}
+.tentang-perusahaan h2 {
+  font-size: 1rem;
+  margin-bottom: 6px;
+}
+.tentang-perusahaan p {
+  color: var(--tinta);
+  max-width: 65ch;
+}
+
+.pengalih-demo {
+  margin-top: 48px;
+  padding: 14px 0 18px;
+  border-top: 1px dashed var(--garis);
+  font-size: 0.875rem;
+  color: var(--tinta-lembut);
+}
+.pengalih-demo label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  font-weight: 600;
+  color: var(--tinta);
+}
+.pengalih-demo select {
+  font: inherit;
+  min-height: 40px;
+  padding: 0 10px;
+  color: var(--tinta);
+  background: var(--permukaan);
+  border: 1.5px solid var(--garis);
+  border-radius: var(--radius-kecil);
+}
+.pengalih-demo p {
+  margin-top: 6px;
 }

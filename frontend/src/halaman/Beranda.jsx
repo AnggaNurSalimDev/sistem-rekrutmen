@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { panggil } from '../api/klien.js';
 import { Memuat, Pesan } from '../komponen/umum.jsx';
+import { useProfil } from '../merek/ProfilContext.jsx';
 
 export default function Beranda() {
   const [lowongan, setLowongan] = useState(null);
   const [galat, setGalat] = useState(null);
   const [ulang, setUlang] = useState(0);
+  const { profil } = useProfil();
 
   useEffect(() => {
     let batal = false;
@@ -22,9 +24,16 @@ export default function Beranda() {
   return (
     <>
       <div className="judul-halaman">
-        <h1>Lowongan yang sedang dibuka</h1>
-        <p>Pilih lowongan, kirim CV, lalu kerjakan tes pilihan ganda singkat. Semua bisa dari HP.</p>
+        <h1>{profil.teks.judulBeranda}</h1>
+        <p>{profil.teks.deskripsiBeranda}</p>
       </div>
+
+      {profil.teks.tentang && (
+        <section className="tentang-perusahaan" aria-label={`Tentang ${profil.nama}`}>
+          <h2>Tentang {profil.nama}</h2>
+          <p>{profil.teks.tentang}</p>
+        </section>
+      )}
 
       {galat && (
         <Pesan jenis="galat" judul="Daftar lowongan gagal dimuat">

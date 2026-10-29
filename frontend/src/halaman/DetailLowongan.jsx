@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { panggil } from '../api/klien.js';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { Memuat, Pesan } from '../komponen/umum.jsx';
+import { useProfil } from '../merek/ProfilContext.jsx';
 
 const UKURAN_CV_MAKS = 10 * 1024 * 1024;
 
@@ -101,6 +102,7 @@ export default function DetailLowongan() {
 }
 
 function FormLamaran({ lowongan, namaAwal, aiAktif }) {
+  const { profil } = useProfil();
   const { api } = useAuth();
   const navigate = useNavigate();
   const idUnik = useId();
@@ -233,7 +235,7 @@ function FormLamaran({ lowongan, namaAwal, aiAktif }) {
       </div>
 
       <button type="submit" className="tombol" disabled={mengirim}>
-        {mengirim ? 'Mengirim lamaran…' : 'Kirim lamaran'}
+        {mengirim ? 'Mengirim lamaran…' : profil.teks.tombolLamar}
       </button>
       {mengirim && aiAktif && (
         <p className="bantuan" role="status" style={{ marginTop: 8 }}>

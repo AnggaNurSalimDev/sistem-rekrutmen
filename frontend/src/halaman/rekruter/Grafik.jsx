@@ -3,13 +3,14 @@ import { rataRataKomponen, sebaranSkor } from '../../rekruter/kandidat.js';
 
 /*
  * Dua grafik kecil di atas tabel kandidat. Masing-masing satu seri, jadi
- * tanpa kotak legenda (judul sudah menyebut isinya). Warna batang #4352B0:
- * langkah indigo yang lolos validasi palet (pita kecerahan + kontras ≥ 3:1
- * terhadap putih); --indigo merek (#2B3A8F) terlalu gelap untuk tanda data.
+ * tanpa kotak legenda (judul sudah menyebut isinya). Warna batang memakai
+ * --tanda-data: warna utama profil yang digeser sampai kontras ≥ 3:1 terhadap
+ * permukaan (lihat src/merek/profil.js), jadi tetap terbaca di tema gelap.
  * Setiap grafik punya tampilan tabel untuk pembaca layar dan cetak.
  */
 
-const WARNA = '#4352b0';
+// Lewat style, bukan atribut fill: atribut SVG tidak bisa membaca var(--…).
+const WARNA = { fill: 'var(--tanda-data)' };
 const TEBAL = 24;
 
 /** Batang dengan ujung data membulat 4px dan pangkal persegi. */
@@ -112,7 +113,7 @@ export function SebaranSkor({ kandidat }) {
                     tabIndex={k.jumlah > 0 ? 0 : -1}
                     aria-label={teks}
                   />
-                  <path d={jalurKolom(x, y, w, h)} fill={WARNA} opacity={hover && hover.teks !== teks ? 0.45 : 1} pointerEvents="none" />
+                  <path d={jalurKolom(x, y, w, h)} style={WARNA} opacity={hover && hover.teks !== teks ? 0.45 : 1} pointerEvents="none" />
                   {i % 2 === 0 && (
                     <text x={kiri + i * lebarSlot + lebarSlot / 2} y={T - 6} textAnchor="middle" className="teks-sumbu">
                       {k.dari}
@@ -194,7 +195,7 @@ export function RataRataKomponen({ kandidat }) {
                   <text x={kiri - 8} y={y + tebal / 2 + 4} textAnchor="end" className="teks-label">
                     {d.nama}
                   </text>
-                  <path d={jalurBatang(kiri, y, w, tebal)} fill={WARNA} opacity={hover && hover.teks !== teks ? 0.45 : 1} pointerEvents="none" />
+                  <path d={jalurBatang(kiri, y, w, tebal)} style={WARNA} opacity={hover && hover.teks !== teks ? 0.45 : 1} pointerEvents="none" />
                   <text x={kiri + w + 6} y={y + tebal / 2 + 4} className="teks-nilai">
                     {d.rata === null ? '–' : Math.round(d.rata)}
                   </text>
