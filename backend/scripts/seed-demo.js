@@ -25,7 +25,7 @@ try {
   const hasil = await isiDataDemo({ pool, config, storage: buatStorage(config) });
   console.log('Data demo siap.\n');
   console.log(`Rekruter : ${hasil.rekruter}`);
-  console.log(`Pelamar  : ${hasil.pelamar.join(', ')}`);
+  console.log(`Pelamar  : ${hasil.pelamar.length} akun, contoh ${hasil.pelamar.slice(0, 3).join(', ')}`);
   console.log(`Password semua akun demo: ${PASSWORD_DEMO}`);
   console.log(`Lowongan : ${hasil.lowongan.map((l) => l.posisi).join(', ')}`);
 } catch (err) {

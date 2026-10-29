@@ -64,6 +64,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 `seed:demo` di Start Command menghapus lalu membuat ulang **hanya** akun `@demo.rekrut.id` setiap backend menyala.
 Akibatnya: demo selalu kembali bersih, dan PDF demo selalu tersedia. Akun yang didaftarkan pengunjung tidak disentuh.
+Seeding 70 pelamar memakan ±10 detik (diukur di laptop; di Render free yang CPU-nya kecil bisa lebih lama), ditambahkan ke waktu bangun backend.
 
 4. Cek: buka `https://<alamat-render>/health` → `{"status":"ok","database":"ok",...}`.
 
@@ -87,7 +88,7 @@ Variabel `VITE_*` dibaca saat **build**. Mengubahnya di Vercel butuh **Redeploy*
 ## 4. Uji setelah deploy
 
 - [ ] `/health` di Render menjawab `ok`.
-- [ ] Beranda Vercel menampilkan "Kepala Toko" dan "Kasir Outlet".
+- [ ] Beranda Vercel menampilkan 4 lowongan (Kepala Toko, Kasir Outlet, Staf Gudang, Admin Penjualan).
 - [ ] Buka `/rekruter` langsung (bukan lewat klik) → halaman masuk, bukan 404.
 - [ ] Masuk `hr@demo.rekrut.id` / `demo12345` → tabel kandidat, grafik, tombol "Buka PDF asli" membuka PDF.
 - [ ] Ganti profil di bawah halaman → warna, huruf, logo, judul tab berubah; refresh tetap di profil itu.

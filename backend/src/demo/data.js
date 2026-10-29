@@ -8,7 +8,14 @@
  *
  * `benar` = berapa soal yang dijawab benar per tes (sisanya salah), supaya
  * skor tes konsisten dengan jawaban yang bisa dilihat HR per soal.
+ *
+ * Isi:
+ * - PELAMAR_CERITA: 7 pelamar yang ditulis tangan, masing-masing satu kasus
+ *   khusus (A–E di roadmap). Nama dan perilakunya dijaga oleh test.
+ * - Pelamar tambahan dibuat generator.js (deterministik) supaya dashboard
+ *   terlihat seperti dipakai sungguhan: puluhan pelamar, 5 lowongan, berbagai tahap.
  */
+import { buatPelamarAcak } from './generator.js';
 
 export const DOMAIN_DEMO = 'demo.rekrut.id';
 export const PASSWORD_DEMO = 'demo12345';
@@ -39,6 +46,35 @@ const SOAL_HITUNG = [
   ['Diskon 10% dari Rp45.000 adalah?', ['Rp4.500', 'Rp5.000', 'Rp450'], 'a'],
 ];
 
+const SOAL_GUDANG = [
+  ['Barang masuk 120 dus, keluar 45 dus, rusak 3 dus. Stok layak jual sekarang?', ['72', '75', '78', '165'], 'a'],
+  ['Prinsip FIFO di gudang berarti …', ['Barang terakhir masuk dikeluarkan dulu', 'Barang pertama masuk dikeluarkan dulu', 'Barang termahal dikeluarkan dulu', 'Barang terberat dikeluarkan dulu'], 'b'],
+  ['Satu palet memuat 24 dus. Pesanan 150 dus butuh minimal berapa palet?', ['6', '5', '7', '8'], 'c'],
+  ['Label barang tidak terbaca saat penerimaan. Yang tepat?', ['Simpan saja di rak mana pun', 'Tebak dari bentuk kemasan', 'Kembalikan ke kurir tanpa catatan', 'Pisahkan dan catat, lalu konfirmasi ke pemasok'], 'd'],
+  ['Kode rak A-03-2 artinya lorong A, rak 03, tingkat 2. Barang di lorong B rak 01 tingkat 4 berkode?', ['B-01-4', 'B-04-1', '4-01-B', 'A-01-4'], 'a'],
+];
+
+const SOAL_ADMIN = [
+  ['Rumus Excel untuk menjumlahkan sel A1 sampai A10?', ['=TOTAL(A1:A10)', '=SUM(A1:A10)', '=ADD(A1;A10)', '=A1+A10'], 'b'],
+  ['Faktur jatuh tempo 30 hari dari 15 Maret. Jatuh temponya?', ['15 April', '30 April', '14 April', '1 April'], 'c'],
+  ['Penjualan Senin Rp2,4 juta, Selasa Rp3 juta. Kenaikannya berapa persen?', ['20%', '60%', '30%', '25%'], 'd'],
+  ['Data pelanggan ganda di laporan. Langkah pertama?', ['Cek berdasarkan nomor pelanggan lalu gabungkan', 'Hapus semua data pelanggan itu', 'Biarkan saja', 'Ganti nama salah satunya'], 'a'],
+  ['Nomor surat 012/ADM/IX/2026. "IX" menunjukkan …', ['Kode divisi', 'Bulan September', 'Nomor urut', 'Tahun'], 'b'],
+];
+
+const SOAL_PELAYANAN = [
+  ['Pelanggan menanyakan barang yang stoknya habis. Jawaban terbaik?', ['"Tidak ada."', 'Menawarkan barang serupa dan mencatat permintaannya', 'Menyuruh mencari di toko lain', 'Diam saja'], 'b'],
+  ['Pelanggan ingin menukar barang tanpa struk. Yang Anda lakukan?', ['Menolak dengan kasar', 'Langsung menukar tanpa cek', 'Menjelaskan aturan toko dan memanggil atasan bila perlu', 'Meminta uang tambahan'], 'c'],
+  ['Saat toko ramai, ada pelanggan lansia kebingungan mencari barang. Anda …', ['Mengantar atau menunjukkan raknya', 'Menunggu dia bertanya dua kali', 'Menyuruh kasir membantu', 'Pura-pura sibuk'], 'a'],
+  ['Barang di rak display berantakan setelah jam sibuk. Kapan dirapikan?', ['Besok pagi', 'Menunggu disuruh', 'Saat toko tutup minggu depan', 'Sesegera mungkin ketika pengunjung mulai sepi'], 'd'],
+];
+
+const SOAL_KOPI = [
+  ['Suhu air yang umum untuk menyeduh kopi manual?', ['60–70°C', '90–96°C', '100°C mendidih', '40°C'], 'b'],
+  ['Satu shot espresso biasanya sekitar …', ['30 ml', '120 ml', '5 ml', '250 ml'], 'a'],
+  ['Mesin kopi harus dibersihkan …', ['Sebulan sekali', 'Kalau rusak saja', 'Setiap akhir shift', 'Tidak perlu'], 'c'],
+];
+
 const opsi = (daftar) => daftar.map((teks, i) => ({ id: 'abcd'[i], teks }));
 const bank = (daftar) => daftar.map(([pertanyaan, o, kunciOpsiId]) => ({ pertanyaan, opsi: opsi(o), kunciOpsiId }));
 
@@ -59,6 +95,18 @@ export const LOWONGAN = [
       ],
     },
     soal: { logika: bank(SOAL_LOGIKA), 'situasi kerja': bank(SOAL_SITUASI) },
+    // Pelamar tambahan maksimal 3 dari 4 skill wajib, supaya Dimas (kasus A) tetap teratas
+    // dan cerita "skor tinggi tapi sering keluar halaman" tetap terlihat di urutan pertama.
+    generator: {
+      jumlah: 14,
+      hari: [1, 18],
+      maksSkillWajib: 3,
+      jabatan: ['Supervisor Toko', 'Asisten Kepala Toko', 'Koordinator Shift', 'Kepala Kasir', 'Kepala Gudang'],
+      deskripsi: ['Memimpin kru shift dan membuat jadwal kerja.', 'Menyusun laporan penjualan mingguan.', 'Mengawasi stok opname bulanan.'],
+      varianSkill: { 'Microsoft Excel': 'MS Excel' },
+      kasus: { karangan: 1 },
+    },
+    keputusan: { diterima: 0, ditolakTerbawah: 2 },
   },
   {
     kunci: 'kasir',
@@ -73,6 +121,104 @@ export const LOWONGAN = [
       tes: [{ jenisTes: 'hitung', targetSkor: 75, batasBawah: 25, bobot: 1 }],
     },
     soal: { hitung: bank(SOAL_HITUNG) },
+    generator: {
+      jumlah: 16,
+      hari: [0, 14],
+      jabatan: ['Kasir', 'Pramuniaga', 'Kru Toko', 'Pelayan'],
+      deskripsi: ['Melayani transaksi tunai dan nontunai.', 'Menghitung uang kas di akhir shift.', 'Merapikan rak dan memeriksa tanggal kedaluwarsa.'],
+      kasus: { karangan: 1, perintahAi: 1 },
+    },
+    keputusan: { diterima: 1, ditolakTerbawah: 2 },
+  },
+  {
+    kunci: 'gudang',
+    status: 'buka',
+    body: {
+      posisi: 'Staf Gudang',
+      budgetMaksimal: 4_200_000,
+      skillWajib: ['Manajemen Stok', 'Bongkar Muat'],
+      skillOpsional: ['Forklift', 'Microsoft Excel'],
+      kebutuhanWaktu: 'Shift bergilir pagi/siang/malam, termasuk akhir pekan',
+      kataKunciSorot: ['SIM C', 'shift malam', 'forklift'],
+      tes: [
+        { jenisTes: 'ketelitian gudang', targetSkor: 80, batasBawah: 40, bobot: 0.7 },
+        { jenisTes: 'hitung', targetSkor: 75, batasBawah: 25, bobot: 0.3 },
+      ],
+    },
+    soal: { 'ketelitian gudang': bank(SOAL_GUDANG), hitung: bank(SOAL_HITUNG) },
+    generator: {
+      jumlah: 13,
+      hari: [2, 20],
+      jabatan: ['Staf Gudang', 'Helper Gudang', 'Checker Barang', 'Kru Bongkar Muat'],
+      deskripsi: ['Mencatat barang masuk dan keluar.', 'Menyusun barang di rak sesuai kode lokasi.', 'Memeriksa kesesuaian barang dengan surat jalan.'],
+      varianSkill: { 'Microsoft Excel': 'Microsoft Office Excel' },
+      kasus: { karangan: 1 },
+    },
+    keputusan: { diterima: 0, ditolakTerbawah: 1 },
+  },
+  {
+    kunci: 'admin',
+    status: 'buka',
+    body: {
+      posisi: 'Admin Penjualan',
+      budgetMaksimal: 4_800_000,
+      skillWajib: ['Microsoft Excel', 'Administrasi', 'Laporan Penjualan'],
+      skillOpsional: ['Akuntansi Dasar'],
+      kebutuhanWaktu: 'Senin–Jumat 08.00–16.00',
+      kataKunciSorot: ['faktur', 'rekap'],
+      tes: [
+        { jenisTes: 'administrasi', targetSkor: 80, batasBawah: 40, bobot: 0.5 },
+        { jenisTes: 'logika', targetSkor: 80, batasBawah: 40, bobot: 0.5 },
+      ],
+    },
+    soal: { administrasi: bank(SOAL_ADMIN), logika: bank(SOAL_LOGIKA) },
+    generator: {
+      jumlah: 11,
+      hari: [0, 10],
+      jabatan: ['Admin Penjualan', 'Staf Administrasi', 'Admin Gudang', 'Kasir'],
+      deskripsi: ['Membuat rekap penjualan harian di Excel.', 'Mengarsipkan faktur dan surat jalan.', 'Mencocokkan laporan kas dengan nota.'],
+      // "MS Excel" dan "Microsoft Excel" dibaca sama oleh kamus alias scoring engine.
+      varianSkill: { 'Microsoft Excel': 'MS Excel' },
+    },
+    keputusan: { diterima: 1, ditolakTerbawah: 1 },
+  },
+  {
+    // Rekrutmen yang sudah selesai: lowongan ditutup, semua CV dicek, keputusan sudah diambil.
+    kunci: 'pramuniaga',
+    status: 'tutup',
+    // Rekrutmen selesai: 2 skor tertinggi diterima, sisanya ditolak.
+    keputusan: { diterima: 2, ditolakSisanya: true },
+    body: {
+      posisi: 'Pramuniaga',
+      budgetMaksimal: 3_500_000,
+      skillWajib: ['Pelayanan Pelanggan', 'Penataan Display'],
+      skillOpsional: [],
+      kebutuhanWaktu: 'Shift siang 13.00–21.00',
+      kataKunciSorot: ['bersedia kerja shift'],
+      tes: [{ jenisTes: 'pelayanan', targetSkor: 75, batasBawah: 25, bobot: 1 }],
+    },
+    soal: { pelayanan: bank(SOAL_PELAYANAN) },
+    generator: {
+      jumlah: 9,
+      hari: [26, 40],
+      jabatan: ['Pramuniaga', 'SPG', 'Kru Toko'],
+      deskripsi: ['Menata display produk baru setiap minggu.', 'Membantu pelanggan mencari ukuran yang pas.'],
+    },
+  },
+  {
+    // Lowongan yang masih disiapkan HR: belum dibuka, belum ada pelamar.
+    kunci: 'barista',
+    status: 'draf',
+    body: {
+      posisi: 'Barista',
+      budgetMaksimal: 3_700_000,
+      skillWajib: ['Menyeduh Kopi', 'Pelayanan Pelanggan'],
+      skillOpsional: ['Latte Art'],
+      kebutuhanWaktu: 'Shift pagi atau sore, Selasa–Minggu',
+      kataKunciSorot: ['latte art'],
+      tes: [{ jenisTes: 'pengetahuan kopi', targetSkor: 70, batasBawah: 30, bobot: 1 }],
+    },
+    soal: { 'pengetahuan kopi': bank(SOAL_KOPI) },
   },
 ];
 
@@ -87,10 +233,11 @@ const kerja = (perusahaan, jabatan, mulai, selesai, kutipan) => ({
   kutipan,
 });
 
-export const PELAMAR = [
+export const PELAMAR_CERITA = [
   {
     // A: skor tinggi, tapi sering keluar halaman saat tes.
     akun: 'dimas',
+    hariLalu: 2,
     nama: 'Dimas Prasetyo',
     lowongan: 'kepala-toko',
     cv: 'dimas-prasetyo.pdf',
@@ -115,6 +262,7 @@ export const PELAMAR = [
   {
     // B: skor sedang, bersih, CV sudah dicek HR.
     akun: 'rina',
+    hariLalu: 6,
     nama: 'Rina Marlina',
     lowongan: 'kepala-toko',
     cv: 'rina-marlina.pdf',
@@ -137,6 +285,7 @@ export const PELAMAR = [
   {
     // C: fresh graduate tanpa riwayat kerja, kamera ditolak.
     akun: 'putri',
+    hariLalu: 4,
     nama: 'Putri Ananda',
     lowongan: 'kepala-toko',
     cv: 'putri-ananda.pdf',
@@ -155,6 +304,7 @@ export const PELAMAR = [
   {
     // D: CV hasil scan, tidak bisa dibaca → HR perlu mengisi manual.
     akun: 'bayu',
+    hariLalu: 3,
     nama: 'Bayu Saputra',
     lowongan: 'kepala-toko',
     cv: 'bayu-saputra-scan.pdf',
@@ -169,6 +319,7 @@ export const PELAMAR = [
   {
     // E: pengalaman kerja tanpa tanggal, gaji di atas budget.
     akun: 'sari',
+    hariLalu: 1,
     nama: 'Sari Wulandari',
     lowongan: 'kepala-toko',
     cv: 'sari-wulandari.pdf',
@@ -190,6 +341,7 @@ export const PELAMAR = [
   {
     // Kasir: baru melamar, belum tes.
     akun: 'fajar',
+    hariLalu: 0,
     nama: 'Fajar Nugroho',
     lowongan: 'kasir',
     cv: 'fajar-nugroho.pdf',
@@ -205,6 +357,7 @@ export const PELAMAR = [
   {
     // Kasir: sudah tes, ditolak HR.
     akun: 'lestari',
+    hariLalu: 9,
     nama: 'Lestari Dewi',
     lowongan: 'kasir',
     cv: 'lestari-dewi.pdf',
@@ -219,4 +372,9 @@ export const PELAMAR = [
     },
     ujian: { hitung: { benar: 2, menit: 5, kamera: 'granted', keluar: [] } },
   },
+];
+
+export const PELAMAR = [
+  ...PELAMAR_CERITA,
+  ...buatPelamarAcak(LOWONGAN, { namaTerpakai: new Set(PELAMAR_CERITA.map((p) => p.nama)) }),
 ];
