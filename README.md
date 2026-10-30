@@ -14,7 +14,7 @@ Dokumentasi: [arsitektur](docs/RECRUITMENT_ARCHITECTURE.md) · [API contract](do
 | 3 | Parser CV: ekstraksi teks PDF, parser AI Claude, verifikasi kutipan, sorotan, kata kunci sorot per lowongan | Sebagian (belum diuji dengan API sungguhan) |
 | 4 | Halaman kandidat: lowongan, lamaran + upload CV, tes pilihan ganda dengan integrity signals | Selesai |
 | 5 | Dashboard rekruter: lowongan, bank soal, tabel kandidat + grafik + CSV, verifikasi CV dengan sorotan, keputusan | Selesai |
-| 6 | Seeder data demo: 2 lowongan, 7 pelamar dengan skenario berbeda | Selesai |
+| 6 | Seeder data demo: 6 lowongan (buka/tutup/draf), 70 pelamar dengan skenario berbeda | Selesai |
 
 ## Menjalankan di komputer sendiri
 
@@ -78,7 +78,7 @@ cd backend
 npm run seed:demo
 ```
 
-Seeder membuat lowongan **Kepala Toko** (5 pelamar: skor tinggi tapi sering keluar halaman, skor sedang yang sudah dicek HR, fresh graduate, CV hasil scan, pengalaman tanpa tanggal) dan **Kasir Outlet** (2 pelamar). Hanya akun `@demo.rekrut.id` yang disentuh; menjalankannya lagi menghapus dan membuat ulang data demo saja. Semua orang dan perusahaan di dalamnya fiktif, dan hasil baca CV-nya berlabel "contoh" karena ditulis tangan, bukan dibaca AI.
+Seeder membuat 6 lowongan (Kepala Toko, Kasir Outlet, Staf Gudang, Admin Penjualan yang dibuka; Pramuniaga yang sudah ditutup dengan keputusan; Barista yang masih draf) dan 70 pelamar. Tujuh di antaranya ditulis tangan sebagai kasus khusus (skor tinggi tapi sering keluar halaman, sudah dicek HR, fresh graduate, CV hasil scan, pengalaman tanpa tanggal, belum tes, ditolak). Sisanya dibuat `src/demo/generator.js` secara deterministik (hasilnya sama setiap kali), termasuk temuan AI karangan yang dibuang verifikasi kutipan, CV berisi perintah tersembunyi untuk AI, dan CV scan yang diisi manual HR. Tanggal lamaran disebar ke 6 minggu terakhir, dan keputusan terima/tolak mengikuti peringkat skor. Seeding ±10 detik. Hanya akun `@demo.rekrut.id` yang disentuh; menjalankannya lagi menghapus dan membuat ulang data demo saja. Semua orang dan perusahaan di dalamnya fiktif, dan hasil baca CV-nya berlabel "contoh" karena ditulis tangan, bukan dibaca AI.
 
 Cara mencoba dari nol:
 
@@ -152,7 +152,8 @@ backend/
     buat-pdf-contoh.py   membuat ulang PDF contoh untuk test (butuh reportlab)
     server-ai-palsu.js   backend dengan parser AI palsu, khusus uji e2e (menolak jalan di produksi)
     seed-demo.js         isi data demo (npm run seed:demo)
-    buat-cv-demo.py      membuat ulang PDF CV demo (butuh reportlab)
+    buat-cv-demo.py      membuat ulang PDF CV 7 pelamar kasus khusus (butuh reportlab);
+                         CV pelamar lain dibuat saat seeding oleh src/demo/pdfSederhana.js
   test/
     *.test.js            unit test scoring engine dan parser CV
     fixtures/cv/         contoh teks CV (fiktif)

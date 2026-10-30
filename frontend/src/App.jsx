@@ -1,6 +1,6 @@
 import { createBrowserRouter, Link, Outlet, RouterProvider, useLocation } from 'react-router-dom';
 import { PenyediaAuth } from './auth/AuthContext.jsx';
-import { Kepala, Pesan, Wajib } from './komponen/umum.jsx';
+import { Kepala, PengalihDemo, Pesan, Wajib } from './komponen/umum.jsx';
 import Beranda from './halaman/Beranda.jsx';
 import DetailLowongan from './halaman/DetailLowongan.jsx';
 import { Masuk, Daftar } from './halaman/Auth.jsx';
@@ -11,10 +11,13 @@ import FormLowongan from './halaman/rekruter/FormLowongan.jsx';
 import LowonganRekruter from './halaman/rekruter/LowonganRekruter.jsx';
 import KelolaSoal from './halaman/rekruter/KelolaSoal.jsx';
 import DetailKandidat from './halaman/rekruter/DetailKandidat.jsx';
+import AturTampilan from './halaman/AturTampilan.jsx';
+import { MODE_DEMO } from './merek/ProfilContext.jsx';
 
 function Kerangka() {
   // Halaman rekruter berisi tabel lebar; halaman pelamar tetap satu kolom sempit.
-  const lebar = useLocation().pathname.startsWith('/rekruter');
+  const { pathname } = useLocation();
+  const lebar = pathname.startsWith('/rekruter') || pathname === '/atur-tampilan';
   return (
     <>
       <a href="#isi" className="sr-only">
@@ -26,6 +29,7 @@ function Kerangka() {
           <Outlet />
         </div>
       </main>
+      <PengalihDemo />
     </>
   );
 }
@@ -56,6 +60,8 @@ const router = createBrowserRouter([
       { path: '/rekruter/lowongan/:id/ubah', element: <Wajib peran="rekruter"><FormLowongan /></Wajib> },
       { path: '/rekruter/lowongan/:lowonganId/tes/:tesId/soal', element: <Wajib peran="rekruter"><KelolaSoal /></Wajib> },
       { path: '/rekruter/kandidat/:id', element: <Wajib peran="rekruter"><DetailKandidat /></Wajib> },
+      // Editor tampilan hanya ada di demo portofolio; di situs klien profil terkunci.
+      { path: '/atur-tampilan', element: MODE_DEMO ? <AturTampilan /> : <TidakDitemukan /> },
       { path: '*', element: <TidakDitemukan /> },
     ],
   },

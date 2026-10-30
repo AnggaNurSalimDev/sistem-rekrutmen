@@ -1,0 +1,16 @@
+{
+  "id": "garda-logistik",
+  "nama": "Garda Logistik",
+  "fiktif": true,
+  "logo": { "teks": "GARDA", "titik": true, "gambar": "/merek/garda-logistik.svg" },
+  "favicon": "/merek/garda-logistik.svg",
+  "warna": { "utama": "#38bdf8", "aksen": "#0b1220" },
+  "huruf": "grotesk",
+  "gaya": { "tema": "gelap", "sudut": "tajam", "kerapatan": "rapat" },
+  "teks": {
+    "judulBeranda": "Rekrutmen gudang & armada",
+    "deskripsiBeranda": "Staf gudang, admin inventaris, dan pengemudi. Seleksi berbasis tes, hasil dinilai sama untuk semua pelamar.",
+    "tentang": "Garda Logistik mengelola gudang dan pengiriman antarkota untuk ratusan toko daring. Operasional 24 jam dengan sistem shift.",
+    "tombolLamar": "Ajukan lamaran"
+  }
+}

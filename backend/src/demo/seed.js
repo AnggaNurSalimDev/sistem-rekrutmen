@@ -17,8 +17,18 @@ import { buatApp } from '../app.js';
 import { hashPassword } from '../auth/password.js';
 import { denganTransaksi } from '../db/pool.js';
 import { DOMAIN_DEMO, LOWONGAN, PASSWORD_DEMO, PELAMAR, REKRUTER } from './data.js';
+import { BULAN_ACUAN } from './generator.js';
+import { buatPdfCv } from './pdfSederhana.js';
 
 const FOLDER_CV = new URL('./cv/', import.meta.url);
+const CV_SCAN = 'bayu-saputra-scan.pdf';
+const STATUS_LOWONGAN = new Set(['draf', 'buka', 'tutup']);
+const MAKS_HARI_LALU = 60;
+// Di lowongan yang masih dibuka, HR demo hanya menolak kandidat yang skornya jelas rendah.
+const AMBANG_TOLAK = 60;
+
+/** Teks CV yang dihasilkan generator, dalam bentuk yang dibandingkan dengan kutipan (sama seperti verifikasi: spasi/baris baru disamakan, huruf kecil). */
+const ratakan = (teks) => teks.toLowerCase().replace(/\s+/g, ' ');
 const POLA_EMAIL_DEMO = `%@${DOMAIN_DEMO}`;
 
 export const emailPelamar = (akun) => `${akun}@${DOMAIN_DEMO}`;
@@ -26,11 +36,43 @@ export const emailPelamar = (akun) => `${akun}@${DOMAIN_DEMO}`;
 /** Invariant data demo, dicek sebelum menyentuh database. */
 export function periksaDataDemo() {
   const kunciLowongan = new Set(LOWONGAN.map((l) => l.kunci));
+  for (const l of LOWONGAN) {
+    if (!STATUS_LOWONGAN.has(l.status)) throw new Error(`Lowongan ${l.kunci}: status "${l.status}" tidak dikenal`);
+    if (l.status === 'draf' && PELAMAR.some((p) => p.lowongan === l.kunci)) throw new Error(`Lowongan ${l.kunci}: draf tidak boleh punya pelamar`);
+    if (l.keputusan) {
+      const { diterima = 0, ditolakTerbawah = 0, ditolakSisanya = false } = l.keputusan;
+      if (!Number.isInteger(diterima) || diterima < 0 || !Number.isInteger(ditolakTerbawah) || ditolakTerbawah < 0) {
+        throw new Error(`Lowongan ${l.kunci}: jumlah keputusan harus bilangan bulat ≥ 0`);
+      }
+      if (ditolakSisanya && l.status !== 'tutup') throw new Error(`Lowongan ${l.kunci}: "tolak sisanya" hanya untuk lowongan yang ditutup`);
+    }
+  }
   const akun = new Set();
+  const nama = PELAMAR.map((p) => p.nama);
   for (const p of PELAMAR) {
     if (!kunciLowongan.has(p.lowongan)) throw new Error(`Pelamar ${p.nama}: lowongan "${p.lowongan}" tidak ada`);
     if (akun.has(p.akun)) throw new Error(`Akun demo ganda: ${p.akun}`);
     akun.add(p.akun);
+    // Parser contoh mengenali CV dari baris pertamanya (nama). Nama yang menjadi bagian nama lain akan tertukar.
+    const tabrakan = nama.find((n) => n !== p.nama && n.includes(p.nama));
+    if (tabrakan) throw new Error(`Nama demo "${p.nama}" adalah bagian dari "${tabrakan}"`);
+    if (!Number.isInteger(p.hariLalu) || p.hariLalu < 0 || p.hariLalu > MAKS_HARI_LALU) throw new Error(`Pelamar ${p.nama}: hariLalu harus 0–${MAKS_HARI_LALU}`);
+    const sumberCv = [p.cv, p.cvBaris, p.cvScan].filter(Boolean).length;
+    if (sumberCv !== 1) throw new Error(`Pelamar ${p.nama}: harus punya tepat satu sumber CV (cv, cvBaris, atau cvScan)`);
+    if (p.cvBaris && p.contohHasil) {
+      // Kutipan contoh harus benar-benar ada di CV, supaya verifikasi kutipan tidak membuangnya.
+      const teks = ratakan(p.cvBaris.map((b) => b.teks).join('\n'));
+      const semua = [...p.contohHasil.skills, ...p.contohHasil.riwayatKerja, ...p.contohHasil.temuanLain];
+      const dikarang = new Set(p.kutipanDikarang ?? []);
+      for (const t of semua) if (dikarang.has(t.kutipan) === teks.includes(ratakan(t.kutipan))) throw new Error(`Pelamar ${p.nama}: kutipan "${t.kutipan}" ${dikarang.has(t.kutipan) ? 'sengaja dikarang tapi ternyata ada' : 'tidak ada'} di CV`);
+      for (const r of p.contohHasil.riwayatKerja) {
+        for (const tgl of [r.mulai, r.selesai]) {
+          if (tgl && tgl > `${BULAN_ACUAN.tahun}-${String(BULAN_ACUAN.bulan).padStart(2, '0')}`) throw new Error(`Pelamar ${p.nama}: tanggal kerja ${tgl} di masa depan`);
+        }
+      }
+    }
+    if (p.isiManual && p.contohHasil) throw new Error(`Pelamar ${p.nama}: isiManual hanya untuk CV yang gagal dibaca`);
+    if (p.keputusan && !(p.konfirmasiHr || p.isiManual)) throw new Error(`Pelamar ${p.nama}: keputusan butuh CV yang sudah dicek HR`);
     const l = LOWONGAN.find((x) => x.kunci === p.lowongan);
     for (const [jenis, u] of Object.entries(p.ujian)) {
       const soal = l.soal[jenis];
@@ -70,13 +112,20 @@ export async function hapusDataDemo(pool) {
   });
 }
 
-/** Parser "AI" untuk demo: mengembalikan contohHasil milik pelamar yang namanya ada di teks CV. */
+/** Parser "AI" untuk demo: mengembalikan contohHasil milik pelamar yang namanya di baris pertama CV. */
 function buatParserContoh() {
+  const perNama = new Map(PELAMAR.filter((p) => p.contohHasil).map((p) => [p.nama, p]));
   return async (teks) => {
-    const p = PELAMAR.find((x) => x.contohHasil && teks.includes(x.nama));
+    const p = perNama.get(teks.split('\n')[0].trim());
     if (!p) throw Object.assign(new Error('CV demo tidak dikenal'), { bisaDiulang: false });
     return structuredClone(p.contohHasil);
   };
+}
+
+async function berkasCv(p) {
+  if (p.cvBaris) return { pdf: buatPdfCv(p.cvBaris, `CV ${p.nama} (fiktif, data demo)`), nama: `${p.akun}.pdf` };
+  const file = p.cvScan ? CV_SCAN : p.cv;
+  return { pdf: await readFile(fileURLToPath(new URL(file, FOLDER_CV))), nama: file };
 }
 
 function klienApi(baseUrl) {
@@ -90,9 +139,22 @@ function klienApi(baseUrl) {
   };
 }
 
-async function buatAkun(pool, email, nama, role) {
-  const hash = await hashPassword(PASSWORD_DEMO);
+async function buatAkun(pool, email, nama, role, hash) {
   await pool.query('INSERT INTO users (email, password_hash, nama, role) VALUES ($1, $2, $3, $4)', [email, hash, nama, role]);
+}
+
+/**
+ * Lamaran demo disebar ke beberapa minggu terakhir (bukan semuanya "hari ini").
+ * Semua waktu milik satu lamaran digeser bersama, jadi urutan dan durasinya tetap.
+ */
+async function mundurkanWaktu(pool, kandidatId, hari, jam) {
+  await denganTransaksi(pool, async (db) => {
+    const geser = `make_interval(days => $2, hours => $3)`;
+    await db.query(`UPDATE kandidat SET dikirim_pada = dikirim_pada - ${geser}, persetujuan_pada = persetujuan_pada - ${geser} WHERE id = $1`, [kandidatId, hari, jam]);
+    await db.query(`UPDATE sesi_ujian SET dimulai_pada = dimulai_pada - ${geser} WHERE kandidat_id = $1`, [kandidatId, hari, jam]);
+    await db.query(`UPDATE ujian_teknis SET dimulai_pada = dimulai_pada - ${geser}, dikirim_pada = dikirim_pada - ${geser} WHERE kandidat_id = $1`, [kandidatId, hari, jam]);
+    await db.query(`UPDATE jawaban_kandidat SET dijawab_pada = dijawab_pada - ${geser} WHERE kandidat_id = $1`, [kandidatId, hari, jam]);
+  });
 }
 
 /**
@@ -106,8 +168,10 @@ export async function isiDataDemo({ pool, config, storage, log = console }) {
   if (lama.jumlahAkun > 0) log.info?.(`Data demo lama dihapus (${lama.jumlahAkun} akun).`);
 
   // Akun dibuat langsung supaya seeder tetap jalan walau pendaftaran rekruter ditutup (ALLOW_REKRUTER_SIGNUP=false).
-  await buatAkun(pool, REKRUTER.email, REKRUTER.nama, 'rekruter');
-  for (const p of PELAMAR) await buatAkun(pool, emailPelamar(p.akun), p.nama, 'kandidat');
+  // Semua akun demo berpassword sama, jadi hash dihitung sekali (scrypt sengaja lambat).
+  const hash = await hashPassword(PASSWORD_DEMO);
+  await buatAkun(pool, REKRUTER.email, REKRUTER.nama, 'rekruter', hash);
+  for (const p of PELAMAR) await buatAkun(pool, emailPelamar(p.akun), p.nama, 'kandidat', hash);
 
   const app = buatApp({ pool, config, storage, parserAi: buatParserContoh(), log: { error() {}, info() {}, warn() {} } });
   const server = await new Promise((ok) => {
@@ -131,22 +195,24 @@ export async function isiDataDemo({ pool, config, storage, log = console }) {
         }
         tes[t.jenisTes] = { id: t.id, kunci };
       }
-      await api(`/lowongan/${data.id}/status`, { method: 'PATCH', token: tokenHr, body: { status: l.status } });
+      // Lowongan yang nanti ditutup tetap dibuka dulu, supaya pelamarnya bisa melamar dan tes.
+      if (l.status !== 'draf') await api(`/lowongan/${data.id}/status`, { method: 'PATCH', token: tokenHr, body: { status: 'buka' } });
       lowongan[l.kunci] = { id: data.id, posisi: l.body.posisi, tes };
     }
 
-    for (const p of PELAMAR) {
+    const waktuMundur = [];
+    for (const [indeks, p] of PELAMAR.entries()) {
       const token = await masuk(emailPelamar(p.akun));
       const l = lowongan[p.lowongan];
       const form = new FormData();
       form.set('lowonganId', l.id);
       form.set('nama', p.nama);
-      form.set('nomorKontak', `0800-1111-${String(PELAMAR.indexOf(p) + 1).padStart(4, '0')}`);
+      form.set('nomorKontak', p.nomorKontak ?? `0800-1111-${String(indeks + 1).padStart(4, '0')}`);
       form.set('ekspektasiGaji', String(p.gaji));
       form.set('ketersediaanWaktu', p.waktu);
       form.set('persetujuanData', 'true');
-      const pdf = await readFile(fileURLToPath(new URL(p.cv, FOLDER_CV)));
-      form.set('cv', new Blob([pdf], { type: 'application/pdf' }), p.cv);
+      const cv = await berkasCv(p);
+      form.set('cv', new Blob([cv.pdf], { type: 'application/pdf' }), cv.nama);
       const { data: lamaran } = await api('/lamaran', { method: 'POST', token, form });
 
       // Hasil "baca CV" demo ditulis tangan: tandai jujur sebagai contoh.
@@ -170,7 +236,52 @@ export async function isiDataDemo({ pool, config, storage, log = console }) {
       }
 
       if (p.konfirmasiHr) await api(`/kandidat/${lamaran.id}/cv/konfirmasi`, { method: 'POST', token: tokenHr });
+      if (p.isiManual) await api(`/kandidat/${lamaran.id}/cv`, { method: 'PUT', token: tokenHr, body: p.isiManual });
       if (p.keputusan) await api(`/kandidat/${lamaran.id}/status`, { method: 'PATCH', token: tokenHr, body: { keputusan: p.keputusan } });
+      // Jam ikut digeser sedikit (deterministik) supaya lamaran di hari yang sama tidak berjam sama.
+      waktuMundur.push([lamaran.id, p.hariLalu, (indeks * 7) % 10]);
+    }
+
+    for (const [id, hari, jam] of waktuMundur) await mundurkanWaktu(pool, id, hari, jam);
+
+    for (const l of LOWONGAN) {
+      const info = lowongan[l.kunci];
+      // Skor dihitung ulang lewat jalur yang sama dengan HR mengubah lowongan, karena
+      // lama kerja "masih bekerja" dihitung sampai tanggal lamaran yang baru saja dimundurkan.
+      if (PELAMAR.some((p) => p.lowongan === l.kunci)) {
+        const { tes: _tes, ...umum } = l.body;
+        await api(`/lowongan/${info.id}`, { method: 'PUT', token: tokenHr, body: umum });
+      }
+      // Keputusan HR mengikuti peringkat skor (CV sudah dicek, semua tes selesai): N teratas diterima,
+      // maksimal M terbawah yang skornya di bawah ambang ditolak. Lowongan yang ditutup: semua sisanya ditolak
+      // (posisinya sudah terisi).
+      if (l.keputusan) {
+        const { diterima = 0, ditolakTerbawah = 0, ditolakSisanya = false } = l.keputusan;
+        const { data: daftar } = await api(`/lowongan/${info.id}/kandidat`, { token: tokenHr });
+        const urut = daftar
+          .filter((k) => k.cv.terverifikasi && k.skorAkhir !== null && !['diterima', 'ditolak'].includes(k.statusAplikasi))
+          .sort((a, b) => b.skorAkhir - a.skorAkhir);
+        if (diterima > urut.length) {
+          throw new Error(`Lowongan ${l.kunci}: hanya ${urut.length} kandidat siap diputuskan, butuh ${diterima} diterima`);
+        }
+        for (const [i, k] of urut.entries()) {
+          let keputusan = null;
+          if (i < diterima) keputusan = 'diterima';
+          else if (ditolakSisanya) keputusan = 'ditolak';
+          else if (i >= Math.max(diterima, urut.length - ditolakTerbawah) && k.skorAkhir < AMBANG_TOLAK) keputusan = 'ditolak';
+          if (keputusan) await api(`/kandidat/${k.id}/status`, { method: 'PATCH', token: tokenHr, body: { keputusan } });
+        }
+      }
+      if (l.status === 'tutup') await api(`/lowongan/${info.id}/status`, { method: 'PATCH', token: tokenHr, body: { status: 'tutup' } });
+
+      // Lowongan dibuat beberapa hari sebelum pelamar pertamanya; yang ditutup "diubah" saat ditutup.
+      const hari = PELAMAR.filter((p) => p.lowongan === l.kunci).map((p) => p.hariLalu);
+      const dibuat = (hari.length ? Math.max(...hari) : 0) + 3;
+      const diubah = l.status === 'tutup' ? Math.max(Math.min(...hari) - 4, 0) : hari.length ? Math.min(...hari) : 1;
+      await pool.query(
+        `UPDATE lowongan SET dibuat_pada = now() - make_interval(days => $2), diubah_pada = now() - make_interval(days => $3) WHERE id = $1`,
+        [info.id, dibuat, Math.min(diubah, dibuat)],
+      );
     }
 
     return {

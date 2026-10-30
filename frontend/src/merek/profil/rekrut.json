@@ -1,0 +1,15 @@
+{
+  "id": "rekrut",
+  "nama": "Rekrut",
+  "logo": { "teks": "Rekrut", "titik": true, "gambar": null },
+  "favicon": "/favicon.svg",
+  "warna": { "utama": "#2b3a8f", "aksen": "#f2b705" },
+  "huruf": "jakarta",
+  "gaya": { "tema": "terang", "sudut": "sedang", "kerapatan": "normal" },
+  "teks": {
+    "judulBeranda": "Lowongan yang sedang dibuka",
+    "deskripsiBeranda": "Pilih lowongan, kirim CV, lalu kerjakan tes pilihan ganda singkat. Semua bisa dari HP.",
+    "tentang": null,
+    "tombolLamar": "Kirim lamaran"
+  }
+}
