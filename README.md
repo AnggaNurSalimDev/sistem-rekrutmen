@@ -15,6 +15,7 @@ Dokumentasi: [arsitektur](docs/RECRUITMENT_ARCHITECTURE.md) · [API contract](do
 | 4 | Halaman kandidat: lowongan, lamaran + upload CV, tes pilihan ganda dengan integrity signals | Selesai |
 | 5 | Dashboard rekruter: lowongan, bank soal, tabel kandidat + grafik + CSV, verifikasi CV dengan sorotan, keputusan | Selesai |
 | 6 | Seeder data demo: 6 lowongan (buka/tutup/draf), 70 pelamar dengan skenario berbeda | Selesai |
+| 7 | Profil tampilan per perusahaan + editor tanpa kode, mode simulasi (demo tanpa backend untuk link publik) | Selesai |
 
 ## Menjalankan di komputer sendiri
 
@@ -85,6 +86,15 @@ Cara mencoba dari nol:
 1. Buat akun dengan peran **Rekruter**, lalu buat lowongan, isi soal tiap tes, dan buka lowongannya.
 2. Keluar, buat akun kedua dengan peran **Pelamar** (pakai email lain), lalu lamar dan kerjakan tesnya.
 3. Masuk lagi sebagai rekruter dan buka lowongan itu untuk melihat tabel kandidat, skor, dan CV.
+
+### Mencoba tanpa backend sama sekali (mode simulasi)
+
+Untuk tautan yang dibagikan bebas (media sosial, misalnya), ada mode yang tidak butuh backend ataupun database — seluruh alur jalan di browser pengunjung sendiri. Lihat [frontend/src/simulasi/README.md](frontend/src/simulasi/README.md) dan bagian "Versi A" di [docs/DEPLOY.md](docs/DEPLOY.md).
+
+```bash
+cd frontend
+VITE_SIMULASI=true VITE_MODE_DEMO=true npm run dev
+```
 
 ## Test
 

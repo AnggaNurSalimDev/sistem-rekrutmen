@@ -1,5 +1,17 @@
 export const BASE_URL = (import.meta.env?.VITE_API_URL ?? 'http://localhost:3000').replace(/\/+$/, '');
 
+// Mode simulasi: tidak ada backend sama sekali. Semua "permintaan" dijawab di
+// browser sendiri lewat simulasi/router.js (lihat simulasi/README.md untuk alasannya).
+// import() dinamis supaya kode simulasi (termasuk data contoh) tidak ikut terbundel
+// ke situs klien sungguhan, yang selalu memakai backend asli.
+export const MODE_SIMULASI = import.meta.env?.VITE_SIMULASI === 'true';
+let modulSimulasi = null;
+async function panggilSimulasi(path, { method, body, form, token }) {
+  modulSimulasi ??= await import('../simulasi/router.js');
+  const { status, data } = await modulSimulasi.routeSimulasi(path, method, { body, form, token });
+  return { status, ok: status >= 200 && status < 300, json: async () => data };
+}
+
 /** Error dari backend dengan bentuk { error: { kode, pesan, detail? } }. */
 export class ErrorApi extends Error {
   constructor(status, kode, pesan, detail = []) {
@@ -36,10 +48,14 @@ export async function panggil(path, { method = 'GET', body, form, token, fetchFn
   }
 
   let res;
-  try {
-    res = await fetchFn(`${BASE_URL}${path}`, { method, headers, body: isi });
-  } catch {
-    throw new ErrorApi(0, 'JARINGAN', 'Tidak bisa terhubung ke server. Periksa koneksi internet, lalu coba lagi.');
+  if (MODE_SIMULASI) {
+    res = await panggilSimulasi(path, { method, body, form, token });
+  } else {
+    try {
+      res = await fetchFn(`${BASE_URL}${path}`, { method, headers, body: isi });
+    } catch {
+      throw new ErrorApi(0, 'JARINGAN', 'Tidak bisa terhubung ke server. Periksa koneksi internet, lalu coba lagi.');
+    }
   }
 
   if (res.status === 204) return null;
