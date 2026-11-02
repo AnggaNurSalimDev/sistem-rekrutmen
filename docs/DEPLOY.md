@@ -100,7 +100,7 @@ gratis tidur setelah 15 menit tanpa kunjungan.
 | `STORAGE_SIGNING_SECRET` | 64 karakter acak, **berbeda** dari JWT_SECRET |
 | `PUBLIC_BASE_URL` | alamat Render, contoh `https://rekrut-api.onrender.com` (isi setelah alamat muncul) |
 | `CORS_ORIGIN` | alamat Vercel versi B (isi setelah langkah 3) |
-| `ALLOW_REKRUTER_SIGNUP` | `true` |
+| `ALLOW_REKRUTER_SIGNUP` | `false` (frontend tidak menawarkan daftar sebagai rekruter; akun demo dibuat langsung oleh `seed:demo`, bukan lewat endpoint ini) |
 | `STORAGE_DRIVER` | `local` |
 
 Membuat rahasia acak di komputer sendiri:
@@ -137,5 +137,6 @@ Sama seperti daftar uji Versi A, ditambah:
 
 Untuk klien sungguhan, mulai dari Versi B lalu ubah:
 - `VITE_MODE_DEMO=false`, `VITE_PROFIL=<id-klien>` (lihat [PROFIL_PERUSAHAAN.md](PROFIL_PERUSAHAAN.md)).
-- `ALLOW_REKRUTER_SIGNUP=false`, dan Start Command **tanpa** `seed:demo`.
+- Start Command **tanpa** `seed:demo`.
+- Buat akun rekruter pertama klien dengan `node scripts/buat-rekruter.js --email=... --nama="..." --password=...` (jalankan sekali dari komputer yang bisa mengakses `DATABASE_URL` yang sama dengan Render — paling mudah lewat Shell tab di dashboard Render, atau jalankan skrip ini secara lokal dengan `DATABASE_URL` diarahkan ke Neon).
 - Instance berbayar (tidak tidur) + storage permanen untuk PDF, dan rate limit login.

@@ -1,8 +1,64 @@
+import { useState } from 'react';
 import { Link, NavLink, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { berandaPeran } from '../auth/tujuan.js';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { useProfil } from '../merek/ProfilContext.jsx';
-import { MODE_SIMULASI } from '../api/klien.js';
+import { MODE_SIMULASI, panggil } from '../api/klien.js';
+
+// Akun demo bawaan (lihat backend/src/demo/data.js / scripts/seed-demo.js — password
+// sama untuk semua akun demo, PASSWORD_DEMO). Dipakai PengalihPeran di bawah untuk
+// "coba sebagai" satu klik, tanpa pengunjung mengetik apa pun.
+const AKUN_DEMO = {
+  rekruter: { email: 'hr@demo.rekrut.id', tujuan: '/rekruter' },
+  pelamar: { email: 'dimas@demo.rekrut.id', tujuan: '/lamaran' },
+};
+const PASSWORD_DEMO = 'demo12345';
+
+/** Hanya di mode demo: masuk sekali klik sebagai rekruter atau pelamar contoh. */
+function PengalihPeran() {
+  const { user, masukDengan } = useAuth();
+  const navigate = useNavigate();
+  const [sibuk, setSibuk] = useState(null);
+  const [galat, setGalat] = useState(null);
+
+  async function masukSebagai(peran) {
+    setSibuk(peran);
+    setGalat(null);
+    try {
+      const { email, tujuan } = AKUN_DEMO[peran];
+      const hasil = await panggil('/auth/login', { method: 'POST', body: { email, password: PASSWORD_DEMO } });
+      masukDengan(hasil);
+      navigate(tujuan);
+    } catch (err) {
+      // Di Versi B (backend sungguhan) sebelum `npm run seed:demo` dijalankan,
+      // akun demo ini belum ada — beri tahu apa adanya, bukan diam-diam gagal.
+      setGalat(`Akun demo belum tersedia (${err.message}). Pastikan data demo sudah diisi.`);
+    } finally {
+      setSibuk(null);
+    }
+  }
+
+  const aktif = (peran) => user?.email === AKUN_DEMO[peran].email;
+
+  return (
+    <div className="pengalih-peran">
+      <span>Coba masuk sebagai</span>
+      <div className="segmen" role="group" aria-label="Coba masuk sebagai">
+        <button type="button" aria-pressed={aktif('pelamar')} disabled={Boolean(sibuk)} onClick={() => masukSebagai('pelamar')}>
+          {sibuk === 'pelamar' ? 'Masuk…' : 'Pelamar'}
+        </button>
+        <button type="button" aria-pressed={aktif('rekruter')} disabled={Boolean(sibuk)} onClick={() => masukSebagai('rekruter')}>
+          {sibuk === 'rekruter' ? 'Masuk…' : 'Rekruter'}
+        </button>
+      </div>
+      {galat && (
+        <p className="galat-blok" role="alert">
+          {galat}
+        </p>
+      )}
+    </div>
+  );
+}
 
 export function Kepala({ lebar = false }) {
   const { user, keluar } = useAuth();
@@ -55,17 +111,20 @@ export function PengalihDemo() {
   return (
     <footer className="pengalih-demo">
       <div className="wadah lebar">
-        <label>
-          <span>Mode demo — lihat tampilan untuk</span>
-          <select value={profil.id} onChange={(e) => ganti(e.target.value)}>
-            {daftar.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nama}
-                {p.fiktif ? ' (fiktif)' : ''}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="baris-pengalih-demo">
+          <label>
+            <span>Mode demo — lihat tampilan untuk</span>
+            <select value={profil.id} onChange={(e) => ganti(e.target.value)}>
+              {daftar.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nama}
+                  {p.fiktif ? ' (fiktif)' : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+          <PengalihPeran />
+        </div>
         <p>
           Data lowongan sama untuk semua profil; yang berubah hanya merek, huruf, teks, dan gaya.{' '}
           <Link to="/atur-tampilan">Buat tampilan untuk perusahaan Anda</Link>

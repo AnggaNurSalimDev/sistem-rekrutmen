@@ -43,7 +43,7 @@ Body:
 ```json
 { "email": "angga@contoh.id", "password": "minimal8", "nama": "Angga", "role": "kandidat" }
 ```
-- `role`: `kandidat` | `rekruter`. Rekruter hanya bisa daftar sendiri jika `ALLOW_REKRUTER_SIGNUP=true` (default untuk demo).
+- `role`: `kandidat` | `rekruter`. Produk ini dipasang per perusahaan (satu pemberi kerja), bukan bursa kerja terbuka — jadi **frontend tidak pernah menawarkan `role: "rekruter"`** di formulir daftar publik; akun rekruter yang pertama dibuat langsung di database lewat `backend/scripts/buat-rekruter.js` (lihat README). Endpoint ini tetap menerima `role: "rekruter"` kalau dipanggil langsung (dipakai skrip data demo dan uji otomatis), tapi hanya jika `ALLOW_REKRUTER_SIGNUP=true`; di situs klien sungguhan ini harus `false`.
 - Email disimpan huruf kecil tanpa spasi. Password 8–200 karakter.
 - 201 `{ "user": User, "token": "..." }`
 - 400 data salah · 403 pendaftaran rekruter ditutup · 409 `EMAIL_TERPAKAI`

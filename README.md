@@ -81,10 +81,19 @@ npm run seed:demo
 
 Seeder membuat 6 lowongan (Kepala Toko, Kasir Outlet, Staf Gudang, Admin Penjualan yang dibuka; Pramuniaga yang sudah ditutup dengan keputusan; Barista yang masih draf) dan 70 pelamar. Tujuh di antaranya ditulis tangan sebagai kasus khusus (skor tinggi tapi sering keluar halaman, sudah dicek HR, fresh graduate, CV hasil scan, pengalaman tanpa tanggal, belum tes, ditolak). Sisanya dibuat `src/demo/generator.js` secara deterministik (hasilnya sama setiap kali), termasuk temuan AI karangan yang dibuang verifikasi kutipan, CV berisi perintah tersembunyi untuk AI, dan CV scan yang diisi manual HR. Tanggal lamaran disebar ke 6 minggu terakhir, dan keputusan terima/tolak mengikuti peringkat skor. Seeding ±10 detik. Hanya akun `@demo.rekrut.id` yang disentuh; menjalankannya lagi menghapus dan membuat ulang data demo saja. Semua orang dan perusahaan di dalamnya fiktif, dan hasil baca CV-nya berlabel "contoh" karena ditulis tangan, bukan dibaca AI.
 
-Cara mencoba dari nol:
+Cara mencoba dari nol (tanpa data demo):
 
-1. Buat akun dengan peran **Rekruter**, lalu buat lowongan, isi soal tiap tes, dan buka lowongannya.
-2. Keluar, buat akun kedua dengan peran **Pelamar** (pakai email lain), lalu lamar dan kerjakan tesnya.
+Akun rekruter **tidak** dibuat lewat formulir daftar publik — produk ini dipasang per
+perusahaan (satu pemberi kerja), bukan bursa kerja terbuka tempat siapa pun bisa
+membuka lowongan sendiri. Buat akun rekruter pertama lewat skrip:
+
+```bash
+cd backend
+npm run buat-rekruter -- --email=hr@contoh.id --nama="HR Contoh" --password=rahasia123
+```
+
+1. Masuk dengan akun itu, buat lowongan, isi soal tiap tes, dan buka lowongannya.
+2. Keluar, buat akun pelamar lewat halaman **Buat akun** di situs (ini tetap terbuka untuk siapa saja — produk ini memang menerima lamaran publik), lalu lamar dan kerjakan tesnya.
 3. Masuk lagi sebagai rekruter dan buka lowongan itu untuk melihat tabel kandidat, skor, dan CV.
 
 ### Mencoba tanpa backend sama sekali (mode simulasi)
@@ -234,7 +243,7 @@ docs/
 ## Batasan yang diketahui
 
 - **Belum ada pembatasan percobaan login (rate limit).** Perlu ditambahkan sebelum dipakai publik.
-- **Pendaftaran rekruter terbuka** (`ALLOW_REKRUTER_SIGNUP=true`) supaya calon klien bisa mencoba demo. Di produksi sebaiknya `false`, dan akun rekruter dibuat lewat undangan.
+- **Akun rekruter dibuat lewat skrip** (`npm run buat-rekruter`, lihat di atas), bukan pendaftaran terbuka — produk ini untuk satu perusahaan, bukan bursa kerja publik. Endpoint `/auth/register` tetap menerima `role: "rekruter"` kalau dipanggil langsung (dipakai skrip data demo dan uji otomatis), diatur lewat `ALLOW_REKRUTER_SIGNUP`; di situs klien sungguhan diset `false`.
 - Jika AI aktif, teks CV dikirim ke Anthropic. Formulir lamaran (Tahap 4) wajib meminta persetujuan untuk ini.
 - Token login disimpan di `localStorage`. Praktis untuk demo, tetapi rentan jika ada celah XSS; untuk produksi sebaiknya cookie `httpOnly`.
 - Lamaran diproses langsung saat dikirim; jika AI aktif, pelamar menunggu beberapa detik. Untuk volume besar sebaiknya dipindah ke antrean kerja di latar belakang.
