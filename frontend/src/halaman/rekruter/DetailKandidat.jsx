@@ -98,7 +98,9 @@ export default function DetailKandidat() {
   const sudahDiputuskan = ['diterima', 'ditolak'].includes(k.statusAplikasi);
   // Aturan sama dengan API: keputusan hanya dari skor yang sudah pasti.
   const belumDicek = perluVerifikasi(k);
-  const waKandidat = tautanWa(k.nomorKontak, `Halo ${k.nama}, selamat! Anda diterima untuk posisi ${k.lowongan.posisi}.`);
+  // Pesan sapaan WA cuma relevan kalau sudah diputuskan diterima; status lain tautannya tetap
+  // aktif (rekruter mungkin perlu tanya sesuatu sebelum memutuskan) tapi tanpa teks pembuka.
+  const waKandidat = tautanWa(k.nomorKontak, k.statusAplikasi === 'diterima' ? `Halo ${k.nama}, selamat! Anda diterima untuk posisi ${k.lowongan.posisi}.` : undefined);
 
   return (
     <>
@@ -109,7 +111,16 @@ export default function DetailKandidat() {
         <div>
           <h1>{k.nama}</h1>
           <p>
-            {k.email}, {k.nomorKontak}. Melamar {formatTanggal(k.dikirimPada)}.
+            <a href={`mailto:${k.email}`}>{k.email}</a>
+            {waKandidat && (
+              <>
+                {', '}
+                <a href={waKandidat} rel="noreferrer">
+                  {k.nomorKontak}
+                </a>
+              </>
+            )}
+            . Melamar {formatTanggal(k.dikirimPada)}.
           </p>
         </div>
         <div className="aksi-judul">
@@ -132,20 +143,6 @@ export default function DetailKandidat() {
           )}
         </div>
       </div>
-
-      {k.statusAplikasi === 'diterima' && (
-        <p className="bantuan kontak-kandidat">
-          Hubungi kandidat: <a href={`mailto:${k.email}`}>{k.email}</a>
-          {waKandidat && (
-            <>
-              {' · '}
-              <a href={waKandidat} rel="noreferrer">
-                WhatsApp ({k.nomorKontak})
-              </a>
-            </>
-          )}
-        </p>
-      )}
 
       {belumDicek && !sudahDiputuskan && (
         <p className="alasan-keputusan" id="alasan-keputusan">

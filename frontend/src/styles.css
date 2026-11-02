@@ -1983,9 +1983,6 @@ th.angka .tombol-urut {
   font-size: 0.8125rem;
   color: var(--tinta-lembut);
 }
-.kontak-kandidat {
-  margin-top: -4px;
-}
 .editor-form .segmen {
   justify-self: start;
 }
