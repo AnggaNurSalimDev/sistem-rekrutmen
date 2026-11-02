@@ -11,6 +11,7 @@ import {
   formatDurasi,
   formatRupiah,
   perluVerifikasi,
+  tautanWa,
   urutkan,
 } from '../../rekruter/kandidat.js';
 import { useData } from '../../rekruter/useData.js';
@@ -97,6 +98,7 @@ export default function DetailKandidat() {
   const sudahDiputuskan = ['diterima', 'ditolak'].includes(k.statusAplikasi);
   // Aturan sama dengan API: keputusan hanya dari skor yang sudah pasti.
   const belumDicek = perluVerifikasi(k);
+  const waKandidat = tautanWa(k.nomorKontak, `Halo ${k.nama}, selamat! Anda diterima untuk posisi ${k.lowongan.posisi}.`);
 
   return (
     <>
@@ -130,6 +132,20 @@ export default function DetailKandidat() {
           )}
         </div>
       </div>
+
+      {k.statusAplikasi === 'diterima' && (
+        <p className="bantuan kontak-kandidat">
+          Hubungi kandidat: <a href={`mailto:${k.email}`}>{k.email}</a>
+          {waKandidat && (
+            <>
+              {' · '}
+              <a href={waKandidat} target="_blank" rel="noreferrer noopener">
+                WhatsApp ({k.nomorKontak})
+              </a>
+            </>
+          )}
+        </p>
+      )}
 
       {belumDicek && !sudahDiputuskan && (
         <p className="alasan-keputusan" id="alasan-keputusan">
