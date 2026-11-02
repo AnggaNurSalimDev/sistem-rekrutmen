@@ -1789,6 +1789,25 @@ th.angka .tombol-urut {
 .pengalih-demo p {
   margin-top: 6px;
 }
+.baris-pengalih-demo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 24px;
+}
+.pengalih-peran {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  font-weight: 600;
+  color: var(--tinta);
+}
+.pengalih-peran .galat-blok {
+  flex-basis: 100%;
+  margin: 6px 0 0;
+  font-size: 0.8125rem;
+}
 
 /* ------------------------------------------------------------ editor tampilan */
 
