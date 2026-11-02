@@ -11,6 +11,7 @@ import {
   formatDurasi,
   formatRupiah,
   perluVerifikasi,
+  tautanWa,
   urutkan,
 } from '../../rekruter/kandidat.js';
 import { useData } from '../../rekruter/useData.js';
@@ -97,6 +98,9 @@ export default function DetailKandidat() {
   const sudahDiputuskan = ['diterima', 'ditolak'].includes(k.statusAplikasi);
   // Aturan sama dengan API: keputusan hanya dari skor yang sudah pasti.
   const belumDicek = perluVerifikasi(k);
+  // Pesan sapaan WA cuma relevan kalau sudah diputuskan diterima; status lain tautannya tetap
+  // aktif (rekruter mungkin perlu tanya sesuatu sebelum memutuskan) tapi tanpa teks pembuka.
+  const waKandidat = tautanWa(k.nomorKontak, k.statusAplikasi === 'diterima' ? `Halo ${k.nama}, selamat! Anda diterima untuk posisi ${k.lowongan.posisi}.` : undefined);
 
   return (
     <>
@@ -107,7 +111,16 @@ export default function DetailKandidat() {
         <div>
           <h1>{k.nama}</h1>
           <p>
-            {k.email}, {k.nomorKontak}. Melamar {formatTanggal(k.dikirimPada)}.
+            <a href={`mailto:${k.email}`}>{k.email}</a>
+            {waKandidat && (
+              <>
+                {', '}
+                <a href={waKandidat} rel="noreferrer">
+                  {k.nomorKontak}
+                </a>
+              </>
+            )}
+            . Melamar {formatTanggal(k.dikirimPada)}.
           </p>
         </div>
         <div className="aksi-judul">

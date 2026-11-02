@@ -147,3 +147,23 @@ export function formatDurasi(detik) {
   const s = Math.round(detik % 60);
   return m > 0 ? `${m} mnt ${s} dtk` : `${s} dtk`;
 }
+
+/**
+ * Ubah nomor HP/WA bentuk bebas ("0812-3456-7890", "+62 812...") jadi kode negara
+ * 62 tanpa simbol, format yang dipakai wa.me. Nomor tanpa awalan 0/62/+62 dibiarkan
+ * apa adanya (tetap diklik, wa.me yang akan menolak kalau memang bukan nomor Indonesia).
+ */
+export function digitWa(nomorKontak) {
+  const digit = (nomorKontak ?? '').replace(/\D/g, '');
+  if (digit.startsWith('62')) return digit;
+  if (digit.startsWith('0')) return `62${digit.slice(1)}`;
+  return digit;
+}
+
+/** Tautan wa.me yang langsung membuka obrolan dengan kandidat, pesan sapaan sudah terisi. */
+export function tautanWa(nomorKontak, pesan) {
+  const nomor = digitWa(nomorKontak);
+  if (!nomor) return null;
+  const query = pesan ? `?text=${encodeURIComponent(pesan)}` : '';
+  return `https://wa.me/${nomor}${query}`;
+}
