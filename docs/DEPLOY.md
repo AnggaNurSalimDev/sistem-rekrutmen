@@ -1,37 +1,83 @@
-# Deploy Demo Portofolio (gratis)
+# Deploy Demo Portofolio
+
+Ada dua versi demo. Pakai **Versi A** untuk tautan yang dibagikan ke media sosial —
+itu yang orang klik tanpa Anda di sana untuk menyalakan apa pun.
 
 ```
- pengunjung
-     │
-     ▼
- Vercel (frontend, statis)          Render (backend, Node)            Neon (PostgreSQL)
- rekrut-demo.vercel.app  ──fetch──▶ rekrut-api.onrender.com ──SQL──▶ ep-xxx.neon.tech
- VITE_API_URL ─────────────────────┘  CORS_ORIGIN = alamat Vercel
-                                      disk sementara: storage/ (PDF CV)
+Versi A — tautan publik, dibagikan bebas                 Versi B — demo lengkap (opsional, lihat bagian 2)
+(mode simulasi, lihat frontend/src/simulasi/README.md)    backend & database sungguhan
+
+ pengunjung                                                pengunjung
+     │                                                         │
+     ▼                                                         ▼
+ Vercel (statis) — seluruh "server" jalan                  Vercel (statis)  ──fetch──▶ Render (backend) ──SQL──▶ Neon
+ di browser pengunjung sendiri, data di                                                  tidur 15 menit tanpa
+ localStorage, tidak pernah dikirim ke mana pun                                          kunjungan, bangun ±1 menit
 ```
 
-Kenapa tiga layanan:
-- **Vercel**: frontend statis, selalu menyala, cepat.
-- **Render free**: backend Express. Tidur setelah 15 menit tanpa kunjungan, bangun ±1 menit.
-- **Neon free**: database permanen. Postgres gratis di Render kedaluwarsa setelah 30 hari, jadi tidak dipakai.
+## Versi A — selalu menyala, gratis, tanpa kartu (dipakai untuk link publik)
 
-## Batasan yang perlu diketahui sebelum mulai
+Tidak ada backend sama sekali untuk versi ini. Cukup satu layanan: Vercel.
+Karena tidak ada server yang bisa tidur, pengunjung yang membuka tautan dari
+media sosial — kapan pun, tanpa Anda tahu — selalu mendapat situs yang hidup.
+
+1. vercel.com → daftar pakai GitHub → **Add New → Project** → pilih repo `sistem-rekrutmen`.
+2. **Root Directory**: `frontend` (tekan Edit untuk mengubahnya). Framework otomatis terbaca Vite.
+   `frontend/vercel.json` sudah mengarahkan semua alamat ke `index.html` (tanpa ini, membuka
+   `/rekruter` langsung atau menekan refresh menghasilkan 404).
+3. Environment Variables:
+
+| Nama | Nilai |
+|---|---|
+| `VITE_SIMULASI` | `true` |
+| `VITE_MODE_DEMO` | `true` |
+| `VITE_PROFIL` | `rekrut` |
+
+   `VITE_API_URL` tidak perlu diisi — mode simulasi tidak memanggilnya sama sekali.
+4. Tekan **Deploy**. Selesai.
+
+Yang didapat: 6 lowongan dan 70 pelamar langsung terlihat (dibuat sekali lewat skrip Node, lihat
+README simulasi), pengunjung bisa melamar dan mengerjakan tes sungguhan, bisa masuk sebagai
+`hr@demo.rekrut.id` / `demo12345` dan melihat dashboard lengkap — semuanya berjalan di
+browser pengunjung sendiri, bukan di server Anda. Batasannya satu: hasil "pembacaan AI" untuk
+CV yang diunggah pengunjung disimulasikan (diberi label jujur), karena memanggil Claude API
+sungguhan butuh server. Rincian lengkap ada di `frontend/src/simulasi/README.md`.
+
+### Uji setelah deploy
+
+- [ ] Beranda menampilkan 4 lowongan terbuka (Kepala Toko, Kasir Outlet, Staf Gudang, Admin Penjualan).
+- [ ] Buka `/rekruter` langsung di alamat (bukan lewat klik) → halaman masuk, bukan 404.
+- [ ] Daftar sebagai pelamar baru → lamar salah satu lowongan → kerjakan tes → kirim.
+- [ ] Masuk `hr@demo.rekrut.id` / `demo12345` → pelamar yang baru saja melamar muncul di dashboard.
+- [ ] Tombol "Buka PDF asli" di kandidat data demo membuka PDF sungguhan (bukan 404).
+- [ ] Ganti profil di bawah halaman, dan coba "Buat tampilan untuk perusahaan Anda".
+- [ ] Coba semuanya sekali lagi dari HP.
+- [ ] Buka tautan di jendela penyamaran (incognito) — ini yang akan dilihat orang asing dari media sosial, pastikan tidak ada bekas sesi Anda sendiri yang ikut terbawa.
+
+## Versi B — demo lengkap dengan backend sungguhan (opsional)
+
+Pakai ini kalau Anda ingin menunjukkan langsung ke calon klien bahwa ada backend,
+database, dan AI sungguhan di baliknya — bukan untuk dibagikan bebas, karena backend
+gratis tidur setelah 15 menit tanpa kunjungan.
+
+### Batasan yang perlu diketahui sebelum mulai
 
 1. **Disk Render free tidak permanen.** Berkas PDF CV hilang setiap kali backend tidur atau deploy ulang.
    Data di database (termasuk teks CV dan skor) tetap ada.
-   Solusi di panduan ini: data demo dibuat ulang setiap backend menyala (langkah 2), jadi PDF demo selalu ada.
+   Solusi di panduan ini: data demo dibuat ulang setiap backend menyala, jadi PDF demo selalu ada.
    PDF yang diunggah pengunjung tetap akan hilang. Solusi permanen: driver storage Supabase/S3 (belum dibuat).
-2. **Kunjungan pertama setelah backend tidur lambat** (±1 menit). Halaman tampil cepat, tapi daftar lowongan baru muncul setelah backend bangun.
+2. **Kunjungan pertama setelah backend tidur lambat** (±1 menit).
 3. **Belum ada pembatasan percobaan login.** Untuk demo berisi data fiktif ini bisa diterima; untuk situs klien harus ditambahkan dulu.
 4. Parser AI dibiarkan mati (`ANTHROPIC_API_KEY` kosong) supaya pengunjung tidak memakan biaya API Anda.
+5. **Render minta verifikasi kartu untuk membuat Web Service**, bahkan di paket gratis — ini bukan kejadian langka, dan tidak selalu bisa dihindari. Kalau Anda tidak punya kartu, lewati Versi B; Versi A sudah cukup untuk portofolio.
 
-## 1. Database — Neon
+### 1. Database — Neon
 
 1. Daftar di neon.com → **New Project** → region terdekat (Singapore).
 2. Salin **connection string** (bentuknya `postgresql://user:pass@ep-....neon.tech/neondb?sslmode=require`).
 3. Simpan; ini `DATABASE_URL`.
 
-## 2. Backend — Render
+### 2. Backend — Render
 
 1. render.com → **New → Web Service** → hubungkan repo GitHub.
 2. Isian:
@@ -53,7 +99,7 @@ Kenapa tiga layanan:
 | `JWT_SECRET` | 64 karakter acak (lihat bawah) |
 | `STORAGE_SIGNING_SECRET` | 64 karakter acak, **berbeda** dari JWT_SECRET |
 | `PUBLIC_BASE_URL` | alamat Render, contoh `https://rekrut-api.onrender.com` (isi setelah alamat muncul) |
-| `CORS_ORIGIN` | alamat Vercel (isi setelah langkah 3) |
+| `CORS_ORIGIN` | alamat Vercel versi B (isi setelah langkah 3) |
 | `ALLOW_REKRUTER_SIGNUP` | `true` |
 | `STORAGE_DRIVER` | `local` |
 
@@ -63,42 +109,33 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
 `seed:demo` di Start Command menghapus lalu membuat ulang **hanya** akun `@demo.rekrut.id` setiap backend menyala.
-Akibatnya: demo selalu kembali bersih, dan PDF demo selalu tersedia. Akun yang didaftarkan pengunjung tidak disentuh.
 Seeding 70 pelamar memakan ±10 detik (diukur di laptop; di Render free yang CPU-nya kecil bisa lebih lama), ditambahkan ke waktu bangun backend.
 
 4. Cek: buka `https://<alamat-render>/health` → `{"status":"ok","database":"ok",...}`.
 
-## 3. Frontend — Vercel
+### 3. Frontend — Vercel (proyek Vercel terpisah dari Versi A)
 
-1. vercel.com → **Add New → Project** → pilih repo.
-2. **Root Directory**: `frontend`. Framework terdeteksi Vite. `frontend/vercel.json` sudah mengarahkan semua alamat ke `index.html`
-   (tanpa ini, membuka `/rekruter` langsung atau menekan refresh menghasilkan 404).
-3. Environment variables:
+Sama seperti Versi A, tapi:
 
 | Nama | Nilai |
 |---|---|
+| `VITE_SIMULASI` | `false` (atau dihapus) |
 | `VITE_API_URL` | alamat Render, tanpa `/` di akhir |
 | `VITE_MODE_DEMO` | `true` |
-| `VITE_PROFIL` | `rekrut` (profil yang tampil pertama kali) |
+| `VITE_PROFIL` | `rekrut` |
 
-4. Deploy. Salin alamat Vercel → kembali ke Render → isi `CORS_ORIGIN` → Render deploy ulang otomatis.
+Deploy, salin alamat Vercel-nya, kembali ke Render, isi `CORS_ORIGIN`. Variabel
+`VITE_*` dibaca saat **build** — mengubahnya di Vercel butuh **Redeploy**.
 
-Variabel `VITE_*` dibaca saat **build**. Mengubahnya di Vercel butuh **Redeploy**.
+### Uji setelah deploy
 
-## 4. Uji setelah deploy
-
+Sama seperti daftar uji Versi A, ditambah:
 - [ ] `/health` di Render menjawab `ok`.
-- [ ] Beranda Vercel menampilkan 4 lowongan (Kepala Toko, Kasir Outlet, Staf Gudang, Admin Penjualan).
-- [ ] Buka `/rekruter` langsung (bukan lewat klik) → halaman masuk, bukan 404.
-- [ ] Masuk `hr@demo.rekrut.id` / `demo12345` → tabel kandidat, grafik, tombol "Buka PDF asli" membuka PDF.
-- [ ] Ganti profil di bawah halaman → warna, huruf, logo, judul tab berubah; refresh tetap di profil itu.
-- [ ] "Buat tampilan untuk perusahaan Anda" → isi nama + logo → **Pakai di demo ini** → beranda memakai merek baru.
-- [ ] Coba dari HP.
 - [ ] Console browser tanpa galat CORS.
 
 ## Situs untuk klien (nanti)
 
-Untuk klien sungguhan, ubah tiga hal dari demo:
+Untuk klien sungguhan, mulai dari Versi B lalu ubah:
 - `VITE_MODE_DEMO=false`, `VITE_PROFIL=<id-klien>` (lihat [PROFIL_PERUSAHAAN.md](PROFIL_PERUSAHAAN.md)).
 - `ALLOW_REKRUTER_SIGNUP=false`, dan Start Command **tanpa** `seed:demo`.
 - Instance berbayar (tidak tidur) + storage permanen untuk PDF, dan rate limit login.

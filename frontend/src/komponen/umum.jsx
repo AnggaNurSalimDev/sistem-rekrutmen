@@ -2,6 +2,7 @@ import { Link, NavLink, Navigate, useLocation, useNavigate } from 'react-router-
 import { berandaPeran } from '../auth/tujuan.js';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { useProfil } from '../merek/ProfilContext.jsx';
+import { MODE_SIMULASI } from '../api/klien.js';
 
 export function Kepala({ lebar = false }) {
   const { user, keluar } = useAuth();
@@ -50,7 +51,7 @@ export function PengalihDemo() {
   const { profil, daftar, demo, ganti } = useProfil();
   const { pathname } = useLocation();
   // Di editor, pengalih disembunyikan: mengganti profil di sini akan menimpa pratinjau draf.
-  if (!demo || pathname === '/atur-tampilan') return null;
+  if ((!demo && !MODE_SIMULASI) || pathname === '/atur-tampilan') return null;
   return (
     <footer className="pengalih-demo">
       <div className="wadah lebar">
@@ -69,6 +70,24 @@ export function PengalihDemo() {
           Data lowongan sama untuk semua profil; yang berubah hanya merek, huruf, teks, dan gaya.{' '}
           <Link to="/atur-tampilan">Buat tampilan untuk perusahaan Anda</Link>
         </p>
+        {MODE_SIMULASI && (
+          <p>
+            Halaman ini berjalan tanpa server: lamaran, tes, dan keputusan yang Anda coba hanya tersimpan di
+            browser ini, tidak dikirim ke mana pun.{' '}
+            <button
+              type="button"
+              className="tombol-teks"
+              onClick={async () => {
+                if (!window.confirm('Kembalikan semua data simulasi ke keadaan awal? Perubahan yang Anda buat di browser ini akan hilang.')) return;
+                const { resetSimulasi } = await import('../simulasi/toko.js');
+                resetSimulasi();
+                window.location.href = '/';
+              }}
+            >
+              Atur ulang data simulasi
+            </button>
+          </p>
+        )}
       </div>
     </footer>
   );
