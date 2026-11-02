@@ -139,7 +139,7 @@ export default function DetailKandidat() {
           {waKandidat && (
             <>
               {' · '}
-              <a href={waKandidat} target="_blank" rel="noreferrer noopener">
+              <a href={waKandidat} rel="noreferrer">
                 WhatsApp ({k.nomorKontak})
               </a>
             </>
