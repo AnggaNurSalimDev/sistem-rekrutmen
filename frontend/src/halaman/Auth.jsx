@@ -1,9 +1,10 @@
 import { useId, useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
-import { panggil } from '../api/klien.js';
+import { MODE_SIMULASI, panggil } from '../api/klien.js';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { Pesan } from '../komponen/umum.jsx';
 import { tujuanSetelahMasuk } from '../auth/tujuan.js';
+import { MODE_DEMO } from '../merek/ProfilContext.jsx';
 
 function useFormAuth(endpoint) {
   const { masukDengan } = useAuth();
@@ -64,6 +65,13 @@ export function Masuk() {
       <p style={{ marginTop: 20 }}>
         Belum punya akun? <Link to={`/daftar${ke ? `?ke=${encodeURIComponent(ke)}` : ''}`}>Buat akun</Link>
       </p>
+      {(MODE_DEMO || MODE_SIMULASI) && (
+        <Pesan jenis="info">
+          <p>
+            Ingin mencoba sisi rekruter? Masuk dengan <code>hr@demo.rekrut.id</code> / <code>demo12345</code>.
+          </p>
+        </Pesan>
+      )}
     </div>
   );
 }
@@ -72,7 +80,7 @@ export function Daftar() {
   const { user } = useAuth();
   const id = useId();
   const { kirim, galat, galatField, mengirim, ke } = useFormAuth('/auth/register');
-  const [isian, setIsian] = useState({ nama: '', email: '', password: '', role: 'kandidat' });
+  const [isian, setIsian] = useState({ nama: '', email: '', password: '' });
   if (user) return <Navigate to={tujuanSetelahMasuk(ke, user.role)} replace />;
 
   const ubah = (k) => (e) => setIsian({ ...isian, [k]: e.target.value });
@@ -80,26 +88,19 @@ export function Daftar() {
   return (
     <div className="form-sempit">
       <div className="judul-halaman">
-        <h1>Buat akun</h1>
+        <h1>Buat akun pelamar</h1>
+        <p>
+          Untuk melamar pekerjaan. Akun rekruter dibuat langsung oleh pemilik lowongan, bukan lewat pendaftaran
+          terbuka di sini.
+        </p>
       </div>
       {galat && <Pesan jenis="galat">{galat}</Pesan>}
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          kirim(isian);
+          kirim({ ...isian, role: 'kandidat' });
         }}
       >
-        <fieldset className="isian">
-          <legend>Saya mendaftar sebagai</legend>
-          <label className="pilihan">
-            <input type="radio" name="role" value="kandidat" checked={isian.role === 'kandidat'} onChange={ubah('role')} />
-            Pelamar kerja
-          </label>
-          <label className="pilihan">
-            <input type="radio" name="role" value="rekruter" checked={isian.role === 'rekruter'} onChange={ubah('role')} />
-            Rekruter (membuka lowongan)
-          </label>
-        </fieldset>
         <div className="isian">
           <label htmlFor={`${id}-nama`}>Nama</label>
           <input id={`${id}-nama`} type="text" autoComplete="name" required value={isian.nama} onChange={ubah('nama')} />

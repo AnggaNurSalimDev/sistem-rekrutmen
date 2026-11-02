@@ -335,6 +335,13 @@ fieldset.isian {
 .pesan strong {
   display: block;
 }
+.pesan code {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--permukaan);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
+}
 
 .kosong {
   padding: 32px 20px;

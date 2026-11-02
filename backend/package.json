@@ -14,7 +14,8 @@
     "test:integration": "node --test --test-concurrency=1 test/integration/*.test.js",
     "test:all": "npm test && npm run test:integration",
     "lint": "eslint .",
-    "seed:demo": "node scripts/seed-demo.js"
+    "seed:demo": "node scripts/seed-demo.js",
+    "buat-rekruter": "node scripts/buat-rekruter.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
