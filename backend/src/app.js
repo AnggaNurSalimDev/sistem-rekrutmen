@@ -21,6 +21,12 @@ export function buatApp({ pool, config, storage, parserAi = null, log = console 
 
   const app = express();
   app.disable('x-powered-by');
+  // Di belakang reverse proxy hosting (mis. Render): percayai SATU hop di depan
+  // (header X-Forwarded-For dari proxy platform-nya), supaya req.ip yang dipakai
+  // pembatas laju (rateLimit.js) adalah IP pengunjung sungguhan, bukan IP proxy
+  // itu sendiri -- kalau tidak, semua pengunjung akan dihitung sebagai satu IP
+  // dan pembatasnya jadi salah sasaran (atau malah tidak memblokir siapa pun).
+  app.set('trust proxy', 1);
   app.use(cors({ origin: config.CORS_ORIGIN.split(',').map((o) => o.trim()) }));
   app.use(express.json({ limit: '100kb' }));
 

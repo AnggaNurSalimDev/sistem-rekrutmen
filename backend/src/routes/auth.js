@@ -3,6 +3,7 @@ import { HttpError } from '../http/errors.js';
 import { parse, z } from '../http/validate.js';
 import { hashPassword, cocokPassword, HASH_PALSU } from '../auth/password.js';
 import { buatToken } from '../auth/middleware.js';
+import { buatBatasAuth } from '../http/rateLimit.js';
 
 const email = z.string().trim().toLowerCase().pipe(z.email()).pipe(z.string().max(254));
 
@@ -23,8 +24,11 @@ const tampilkanUser = (u) => ({ id: u.id, email: u.email, nama: u.nama, role: u.
 export function ruteAuth({ pool, config, requireAuth }) {
   const r = Router();
   const opsiToken = { secret: config.JWT_SECRET, expiresIn: config.JWT_EXPIRES_IN };
+  // Satu pembatas dipakai bersama oleh /register dan /login (bukan /me, yang
+  // sudah digerbangi JWT dan dipanggil berulang oleh frontend secara wajar).
+  const batasAuth = buatBatasAuth();
 
-  r.post('/register', async (req, res) => {
+  r.post('/register', batasAuth, async (req, res) => {
     const data = parse(skemaDaftar, req.body);
     if (data.role === 'rekruter' && !config.ALLOW_REKRUTER_SIGNUP) {
       throw new HttpError(403, 'DILARANG', 'Pendaftaran rekruter sedang ditutup');
@@ -45,7 +49,7 @@ export function ruteAuth({ pool, config, requireAuth }) {
     }
   });
 
-  r.post('/login', async (req, res) => {
+  r.post('/login', batasAuth, async (req, res) => {
     const data = parse(skemaLogin, req.body);
     const { rows } = await pool.query(
       'SELECT id, email, nama, role, password_hash FROM users WHERE email = $1',

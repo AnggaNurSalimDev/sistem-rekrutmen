@@ -23,6 +23,7 @@ Kontrak antara frontend dan backend. Semua body dan respons berformat JSON, kecu
 | 404 | `TIDAK_DITEMUKAN`, `RUTE_TIDAK_ADA` | Data tidak ada / bukan milik Anda / endpoint tidak ada |
 | 409 | `KONFLIK`, `EMAIL_TERPAKAI` | Aksi bertentangan dengan keadaan data saat ini |
 | 413 | `TERLALU_BESAR` | Body lebih dari 100 KB |
+| 429 | `TERLALU_SERING` | Pembatas laju: `/auth/register` dan `/auth/login` dibatasi bersama 20 percobaan/15 menit per IP |
 | 500 | `INTERNAL` | Bug di server (detail hanya di log server) |
 
 ---
